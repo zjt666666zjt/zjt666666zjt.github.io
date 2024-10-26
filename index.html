@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 
 <head>
     <!-- Meta, title, CSS, favicons, etc. -->
@@ -15,37 +15,6 @@
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/dmego-home-page@latest/assets/css/iconfont.css">
     <link rel="apple-touch-icon" href="https://unpkg.com/dmego-home-page@latest/apple-touch-icon.png">
     <link rel="icon" href="https://unpkg.com/dmego-home-page@latest/favicon.ico">
-    <style>
-        body {
-            background-image: url('https://global.bing.com/th?id=OHR.MontBlancMassif_ZH-CN9172264924_1920x1200.jpg');
-            background-size: cover;
-            background-position: center;
-            color: white; /* 字体颜色 */
-        }
-        .reminder-container {
-            background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 500px;
-            margin: 20px auto;
-            text-align: center;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            border: none;
-        }
-        button {
-            background-color: #4CAF50; /* 按钮颜色 */
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
 </head>
 
 <body>
@@ -86,20 +55,20 @@
                             <nav class="cover-navigation cover-navigation--primary">
                                 <ul class="navigation">
                                     <li class="navigation__item">
-                                        <a href="/" class="blog-button">首页</a>
+                                        <a href="https://zjt666666zjt.github.io/" class="blog-button">首页</a>
                                     </li>
                                     <li class="navigation__item">
-                                        <a href="https://kingsum.me/" class="blog-button" target="_blank">博客</a>
+                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">博客</a>
                                     </li>
                                     <li class="navigation__item">
-                                        <a href="https://kingsum.me/" class="blog-button" target="_blank">简历</a>
+                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">简历</a>
                                     </li>
                                     <li class="navigation__item">
-                                        <a href="https://kingsum.me/" class="blog-button" target="_blank">关于</a>
+                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">关于</a>
                                     </li>
                                     <li class="navigation__item">
-                                        <a href="https://kingsum.me/reminder-app" class="blog-button">提醒应用</a>
-                                    </li> <!-- 新添加的提醒应用链接 -->
+                                        <a href="https://zjt666666zjt.github.io/navigation.html" class="blog-button">导航</a>
+                                    </li> <!-- 新添加的导航链接 -->
                                 </ul>
                             </nav>
                         </div>
@@ -129,16 +98,6 @@
                             </nav>
                         </div>
                     </div>
-                    <div class="reminder-container">
-                        <h2>添加提醒事项</h2>
-                        <form id="reminder-form">
-                            <input type="text" id="title" placeholder="标题" required>
-                            <input type="datetime-local" id="due_date" required>
-                            <textarea id="description" placeholder="描述" required></textarea>
-                            <button type="submit">添加提醒</button>
-                        </form>
-                        <ul id="reminder-list"></ul>
-                    </div>
                 </div>
             </div>
             <div class="panel-cover--overlay cover-slate"></div>
@@ -148,27 +107,5 @@
     </header>
     <script type="text/javascript" src="https://unpkg.com/dmego-home-page@latest/assets/js/main.js"></script>
     <script type="text/javascript" src="./assets/json/images.json?cb=getBingImages"></script>
-    <script>
-        const form = document.getElementById('reminder-form');
-        const reminderList = document.getElementById('reminder-list');
-        let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const title = document.getElementById('title').value;
-            const dueDate = document.getElementById('due_date').value;
-            const description = document.getElementById('description').value;
-            const reminder = { title, dueDate, description };
-            reminders.push(reminder);
-            localStorage.setItem('reminders', JSON.stringify(reminders));
-            addReminderToList(reminder);
-            form.reset();
-        });
-        function addReminderToList(reminder) {
-            const li = document.createElement('li');
-            li.textContent = `${reminder.title} - ${reminder.dueDate}: ${reminder.description}`;
-            reminderList.appendChild(li);
-        }
-        reminders.forEach(addReminderToList);
-    </script>
 </body>
 </html>
