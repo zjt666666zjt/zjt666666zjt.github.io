@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能提醒应用</title>
+</head>
+<body>
+    <h1>添加提醒事项</h1>
+    <form id="reminder-form">
+        <input type="text" id="title" placeholder="标题" required>
+        <input type="datetime-local" id="due_date" required>
+        <textarea id="description" placeholder="描述" required></textarea>
+        <button type="submit">添加提醒</button>
+    </form>
+    <ul id="reminder-list"></ul>
+
+    <script>
+        const form = document.getElementById('reminder-form');
+        const reminderList = document.getElementById('reminder-list');
+        let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const dueDate = document.getElementById('due_date').value;
+            const description = document.getElementById('description').value;
+
+            const reminder = { title, dueDate, description };
+            reminders.push(reminder);
+            localStorage.setItem('reminders', JSON.stringify(reminders));
+            addReminderToList(reminder);
+            form.reset();
+        });
+
+        function addReminderToList(reminder) {
+            const li = document.createElement('li');
+            li.textContent = `${reminder.title} - ${reminder.dueDate}: ${reminder.description}`;
+            reminderList.appendChild(li);
+        }
+
+        reminders.forEach(addReminderToList);
+    </script>
+</body>
+</html>
