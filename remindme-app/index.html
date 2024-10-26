@@ -1,45 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能提醒应用</title>
-</head>
-<body>
-    <h1>添加提醒事项</h1>
-    <form id="reminder-form">
-        <input type="text" id="title" placeholder="标题" required>
-        <input type="datetime-local" id="due_date" required>
-        <textarea id="description" placeholder="描述" required></textarea>
-        <button type="submit">添加提醒</button>
-    </form>
-    <ul id="reminder-list"></ul>
-
-    <script>
-        const form = document.getElementById('reminder-form');
-        const reminderList = document.getElementById('reminder-list');
-        let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const title = document.getElementById('title').value;
-            const dueDate = document.getElementById('due_date').value;
-            const description = document.getElementById('description').value;
-
-            const reminder = { title, dueDate, description };
-            reminders.push(reminder);
-            localStorage.setItem('reminders', JSON.stringify(reminders));
-            addReminderToList(reminder);
-            form.reset();
-        });
-
-        function addReminderToList(reminder) {
-            const li = document.createElement('li');
-            li.textContent = `${reminder.title} - ${reminder.dueDate}: ${reminder.description}`;
-            reminderList.appendChild(li);
+    <title>提醒应用</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
         }
 
-        reminders.forEach(addReminderToList);
-    </script>
+        header {
+            background: #35424a;
+            color: #ffffff;
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        .content {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #5cb85c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #4cae4c;
+        }
+
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>提醒应用</h1>
+    </header>
+    <div class="content">
+        <h2>设置你的提醒</h2>
+        <p>使用此应用来管理你的学习和任务提醒。</p>
+        <div class="image-container">
+            <img src="https://global.bing.com/th?id=OHR.MontBlancMassif_ZH-CN9172264924_1920x1200.jpg" alt="Bing 每日图像">
+        </div>
+        <a href="#" class="btn">添加提醒</a>
+    </div>
+    <footer>
+        <p>© 2024 KingSum. 版权所有。</p>
+    </footer>
 </body>
+
 </html>
