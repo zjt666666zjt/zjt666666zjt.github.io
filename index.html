@@ -237,7 +237,8 @@
             </div>
             
             <!-- 移动端汉堡按钮 (新增) -->
-            <div class="md:hidden">
+            <!-- 优化：添加 z-50 确保按钮在全屏菜单之上 -->
+            <div class="md:hidden relative z-50">
                 <button id="mobile-menu-toggle" class="text-gray-300 hover:text-white p-2 rounded-md">
                     <i id="icon-menu" data-lucide="menu" class="w-6 h-6"></i>
                     <i id="icon-x" data-lucide="x" class="w-6 h-6 hidden"></i>
@@ -246,8 +247,10 @@
         </div>
 
         <!-- 移动端弹出菜单 (新增) -->
-        <div id="mobile-menu" class="hidden md:hidden absolute top-full left-0 w-full bg-[var(--color-card)]/95 backdrop-blur-md shadow-xl rounded-b-lg overflow-hidden">
-            <div class="flex flex-col space-y-4 p-6">
+        <!-- 优化：改为 fixed 全屏菜单 (z-40)，解决重叠问题 -->
+        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 z-40 w-full h-screen bg-[var(--color-card)]/95 backdrop-blur-lg overflow-y-auto">
+            <!-- 优化：增加 pt-24 (padding-top) 为导航栏留出空间 -->
+            <div class="flex flex-col space-y-4 p-6 pt-24">
                 <a href="#featured-posts" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">精选文章</a>
                 <a href="#projects" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">个人项目</a>
                 <a href="#tech-stack" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">技术栈</a>
@@ -597,6 +600,13 @@
                     // 切换图标的可见性
                     iconMenu.classList.toggle('hidden');
                     iconX.classList.toggle('hidden');
+                    
+                    // (新增) 切换时锁定/解锁 body 滚动
+                    if (mobileMenu.classList.contains('hidden')) {
+                        document.body.style.overflow = '';
+                    } else {
+                        document.body.style.overflow = 'hidden';
+                    }
                 };
                 
                 // 绑定点击事件到汉堡按钮
