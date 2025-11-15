@@ -248,7 +248,8 @@
 
         <!-- 移动端弹出菜单 (新增) -->
         <!-- 优化：改为 fixed 全屏菜单 (z-40)，解决重叠问题 -->
-        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 z-40 w-full h-screen bg-[var(--color-card)]/95 backdrop-blur-lg overflow-y-auto">
+        <!-- 优化：移除 /95 透明度和 backdrop-blur-lg，使其完全不透明 -->
+        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 z-40 w-full h-screen bg-[var(--color-card)] overflow-y-auto">
             <!-- 优化：增加 pt-24 (padding-top) 为导航栏留出空间 -->
             <div class="flex flex-col space-y-4 p-6 pt-24">
                 <a href="#featured-posts" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">精选文章</a>
