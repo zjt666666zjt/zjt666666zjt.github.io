@@ -1,111 +1,628 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <!-- Meta, title, CSS, favicons, etc. -->
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="KingSum Home Page">
-    <meta name="keywords" content="KingSum,Homepage">
-    <meta name="author" content="KingSum">
-    <title>KingSum HomePage</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/dmego-home-page@latest/assets/css/onlinewebfonts.css"/>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/dmego-home-page@latest/assets/css/vno.css">
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/dmego-home-page@latest/assets/css/iconfont.css">
-    <link rel="apple-touch-icon" href="https://unpkg.com/dmego-home-page@latest/apple-touch-icon.png">
-    <link rel="icon" href="https://unpkg.com/dmego-home-page@latest/favicon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C-47 的数字中枢 | 博客</title>
+    
+    <!-- 1. 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. 引入 Google Fonts: Exo 2 (前卫标题) 和 Inter (优雅正文) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,700;0,900;1,700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 3. 引入 Lucide Icons 图标库 (UMD 版本) -->
+    <script src="https://unpkg.com/lucide/dist/umd/lucide.min.js"></script>
+    
+    <!-- 4. 自定义样式 (动画、配色、字体) -->
+    <style>
+        :root {
+            --color-accent1: #00f2ff; /* 电子蓝 */
+            --color-accent2: #ff00ff; /* 品红 */
+            --color-bg: #030014;      /* 深空紫黑 */
+            --color-card: #0a0423;    /* 卡片背景 */
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 环境光背景 */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -150px;
+            pointer-events: none;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 10% 10%, var(--color-accent1) 0, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--color-accent2) 0, transparent 40%);
+            opacity: 0.15;
+            filter: blur(100px);
+            transform: translateZ(-1px);
+        }
+
+        .font-heading {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        /* 流光文字 */
+        .gradient-text {
+            background-image: linear-gradient(90deg, var(--color-accent1), var(--color-accent2), var(--color-accent1));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-flow 4s linear infinite;
+        }
+        @keyframes text-flow {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
+        }
+
+        /* 滚动淡入 */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 玻璃拟态卡片 */
+        .card-glow {
+            background-color: var(--color-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-glow > * {
+            position: relative;
+            z-index: 2;
+        }
+        .card-glow::before {
+            content: "";
+            position: absolute;
+            inset: -40%;
+            opacity: 0;
+            z-index: 1;
+            background: conic-gradient(
+                from 180deg, 
+                transparent, 
+                var(--color-accent1), 
+                var(--color-accent2), 
+                transparent 70%
+            );
+            transition: opacity 0.45s ease-out;
+            pointer-events: none;
+            animation: rotate-gradient 8s linear infinite;
+        }
+        .card-glow:hover {
+            border-color: var(--color-accent1);
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 0 25px rgba(0, 242, 255, 0.1), 0 0 40px rgba(0, 242, 255, 0.1);
+        }
+        .card-glow:hover::before {
+            opacity: 0.7;
+        }
+        @keyframes rotate-gradient {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 高亮按钮 */
+        .btn-glow {
+            background-color: var(--color-accent1);
+            color: #000;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .btn-glow:hover {
+            background-color: #fff;
+            color: #000;
+            box-shadow: 0 0 25px rgba(0, 242, 255, 0.7);
+            transform: scale(1.05);
+        }
+        
+        .btn-outline {
+            border: 1px solid var(--color-accent2);
+            color: var(--color-accent2);
+            transition: all 0.3s ease;
+        }
+        .btn-outline:hover {
+            background-color: var(--color-accent2);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        /* 技术栈滚动 */
+        .marquee {
+            overflow: hidden;
+            position: relative;
+            white-space: nowrap;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 40s linear infinite;
+            padding-left: 100%;
+        }
+        .marquee:hover .marquee-content {
+            animation-play-state: paused;
+        }
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-100%); }
+        }
+
+        /* 导航滚动背景 */
+        nav.is-scrolled {
+            background-color: rgba(3, 0, 20, 0.7);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease-out, border-color 0.3s ease-out;
+        }
+
+        /* 打字机光标 */
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.5rem;
+            background-color: var(--color-accent1);
+            animation: blink 0.9s infinite;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* ======= Hero 圆环 · 参照截图 ======= */
+        .hero-orbit-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-orbit {
+            position: relative;
+            width: 260px;
+            aspect-ratio: 1 / 1;
+            border-radius: 9999px;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(255,255,255,0.15), transparent 55%),
+                radial-gradient(circle at 80% 80%, rgba(0,242,255,0.4), transparent 55%);
+            box-shadow:
+                0 0 40px rgba(0, 242, 255, 0.25),
+                0 0 80px rgba(123, 31, 162, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            isolation: isolate;
+            animation: hero-float 9s ease-in-out infinite alternate;
+        }
+
+        .hero-orbit-ring {
+            position: absolute;
+            inset: 12px;
+            border-radius: inherit;
+            background: radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,0.65) 100%);
+            box-shadow: inset 0 0 35px rgba(0,0,0,0.9);
+        }
+
+        .hero-orbit-ring::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 1px dashed rgba(200, 200, 255, 0.7);
+            box-shadow: 0 0 20px rgba(124, 77, 255, 0.9);
+            opacity: 0.9;
+        }
+
+        .hero-orbit-inner {
+            position: relative;
+            z-index: 2;
+            width: 70%;
+            border-radius: 24px;
+            background: radial-gradient(circle at 0 0, rgba(0,0,0,0.9), rgba(5,10,25,0.95));
+            padding: 1.1rem 1rem 0.9rem;
+            box-shadow:
+                0 16px 30px rgba(0,0,0,0.9),
+                0 0 24px rgba(0,242,255,0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .code-mono {
+            font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #e5e7ff;
+            white-space: pre;
+        }
+
+        .hero-chip {
+            align-self: flex-start;
+            padding: 0.4rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #4c1d95, #1d4ed8);
+            color: #e5e7ff;
+            box-shadow:
+                0 0 20px rgba(59,130,246,0.8),
+                0 8px 20px rgba(0,0,0,0.9);
+        }
+
+        @keyframes hero-float {
+            from {
+                transform: translate3d(0, 0, 0);
+            }
+            to {
+                transform: translate3d(0, -10px, 0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-orbit {
+                width: 220px;
+            }
+        }
+
+        /* 减少动效模式：关闭大部分动画 */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
 </head>
 
-<body>
-    <span class="mobile btn-mobile-menu">
-        <i class="social iconfont icon-list btn-mobile-menu__icon"></i>
-        <i class="social iconfont icon-angleup btn-mobile-close__icon hidden"></i>
-    </span>
-    <header id="panel" class="panel-cover">
-        <div class="panel-main">
-            <div class="panel-main__inner panel-inverted">
-                <div class="panel-main__content">
-                    <div class="ih-item circle effect right_to_left">            
-                        <a href="#" title="" class="blog-button">
-                            <div class="img"><img src="https://avatars.githubusercontent.com/u/147808612?v=4" alt="img" class="js-avatar iUp profilepic"></div>
-                            <div class="info iUp">
-                                <div class="info-back">
-                                    <h2> 
-                                        Fighting
-                                    </h2>
-                                    <p>
-                                        2023 · 发生
-                                    </p>
-                                </div>
-                            </div>
+<body class="antialiased">
+
+    <!-- ===== 导航栏 ===== -->
+    <nav id="site-nav" class="sticky top-0 z-50 w-full px-4 py-3 backdrop-blur-lg border-b border-gray-500/10 transition-colors duration-300">
+        <div class="container mx-auto flex justify-between items-center max-w-6xl">
+            <a href="#" class="text-2xl font-heading text-white hover:text-[var(--color-accent1)] transition-colors">
+                C-47<span class="text-[var(--color-accent2)]">.</span>
+            </a>
+            
+            <div class="hidden md:flex space-x-6 items-center">
+                <a href="#featured-posts" class="text-gray-300 hover:text-white transition-colors">精选文章</a>
+                <a href="#projects" class="text-gray-300 hover:text-white transition-colors">个人项目</a>
+                <a href="#tech-stack" class="text-gray-300 hover:text-white transition-colors">技术栈</a>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors">关于我</a>
+            </div>
+            
+            <div class="flex space-x-4">
+                <a href="#" class="text-gray-400 hover:text-[var(--color-accent1)] transition-colors" title="GitHub">
+                    <i data-lucide="github" class="w-5 h-5"></i>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-[var(--color-accent2)] transition-colors" title="LinkedIn">
+                    <i data-lucide="linkedin" class="w-5 h-5"></i>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition-colors" title="RSS">
+                    <i data-lucide="rss" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== 主要内容 ===== -->
+    <main class="container mx-auto max-w-6xl px-4 py-16 md:py-24">
+
+        <!-- ===== Hero 区 ===== -->
+        <header class="py-24 md:py-32 fade-in-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                
+                <!-- 左：文案 -->
+                <div class="text-center md:text-left">
+                    <h1 class="font-heading text-5xl md:text-7xl lg:text-8xl gradient-text mb-6">
+                        代码重构现实
+                    </h1>
+                    <p class="text-lg md:text-xl text-gray-300 max-w-xl mx-auto md:mx-0">
+                        欢迎来到 C-47 的数字中枢。一个关于全栈开发、人工智能和未来技术的探索性博客。
+                    </p>
+                    
+                    <p class="text-lg text-[var(--color-accent1)] mt-4 h-6 min-h-[1.5rem]">
+                        <span id="typing-text"></span><span class="typing-cursor"></span>
+                    </p>
+                    
+                    <div class="mt-10 flex justify-center md:justify-start gap-4">
+                        <a href="#featured-posts" class="btn-glow px-6 py-3 rounded-full">
+                            开始探索
+                        </a>
+                        <a href="#" class="btn-outline px-6 py-3 rounded-full flex items-center gap-2">
+                            <i data-lucide="user-round" class="w-4 h-4"></i>
+                            关于我
                         </a>
                     </div>
-                    <h1 class="panel-cover__title panel-title iUp">
-                        <a href="#" title="KingSum Home Page">KingSum</a>
-                    </h1>
-                    <p class="panel-cover__subtitle panel-subtitle iUp">Code Create Life</p>
-                    <hr class="panel-cover__divider iUp" />
-                    <p id="description" class="panel-cover__description iUp">如何得与凉风约, 不共尘沙一并来!
-                        <br/>
-                        <strong>-「中牟道中」</strong>
-                    </p>
-                    <div class="navigation-wrapper iUp">
-                        <div>
-                            <nav class="cover-navigation cover-navigation--primary">
-                                <ul class="navigation">
-                                    <li class="navigation__item">
-                                        <a href="https://zjt666666zjt.github.io/" class="blog-button">首页</a>
-                                    </li>
-                                    <li class="navigation__item">
-                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">博客</a>
-                                    </li>
-                                    <li class="navigation__item">
-                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">简历</a>
-                                    </li>
-                                    <li class="navigation__item">
-                                        <a href="https://zjt666666zjt.github.io/" class="blog-button" target="_blank">关于</a>
-                                    </li>
-                                    <li class="navigation__item">
-                                        <a href="https://zjt666666zjt.github.io/navigation" class="blog-button">导航</a>
-                                    </li> <!-- 新添加的导航链接 -->
-                                </ul>
-                            </nav>
-                        </div>
-                        <div class="iUp">
-                            <nav class="cover-navigation navigation--social">
-                                <ul class="navigation">
-                                    <li class="navigation__item">
-                                        <a href="https://github.com/zjt666666zjt/" title="github" target="_blank">
-                                            <i class='social iconfont icon-github'></i>
-                                            <span class="label">github</span>
-                                        </a>
-                                    </li>
+                </div>
 
-                                    <li class="navigation__item">
-                                        <a href="https://www.zhihu.com/people/lu-ben-wei-82-68" title="zhihu" target="_blank">
-                                            <i class='social iconfont icon-zhihu'></i>
-                                            <span class="label">zhihu</span>
-                                        </a>
-                                    </li>
-                                    <li class="navigation__item">
-                                        <a href="mailto:zjt666zjt@gmail.com" title="email">
-                                            <i class='social iconfont icon-email'></i>
-                                            <span class="label">email</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
+                <!-- 右：圆环代码卡片（参照截图） -->
+                <div class="hidden md:flex justify-center">
+                    <div class="hero-orbit-wrap">
+                        <div class="hero-orbit">
+                            <div class="hero-orbit-ring"></div>
+                            <div class="hero-orbit-inner">
+                                <div class="code-mono text-left">
+const dev = &#123;
+  name: "C-47",
+  role: "Full-stack Engineer",
+  stack: ["React", "TypeScript", "Rust"]
+&#125;;
+                                </div>
+                                <div class="hero-chip">
+                                    LIVE CODING · IN BROWSER
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
-            <div class="panel-cover--overlay cover-slate"></div>
+        </header>
+
+        <!-- ===== 精选文章 ===== -->
+        <section id="featured-posts" class="mb-24">
+            <h2 class="font-heading text-3xl md:text-4xl text-white mb-8 fade-in-section">
+                <i data-lucide="star" class="inline-block w-8 h-8 text-[var(--color-accent1)] -mt-1"></i>
+                精选文章
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <a href="#" class="card-glow md:col-span-2 md:row-span-2 p-6 flex flex-col justify-between group fade-in-section" style="transition-delay: 100ms;">
+                    <div>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-[var(--color-accent1)] text-black mb-4 inline-block">深度解析</span>
+                        <h3 class="font-heading text-2xl md:text-3xl text-white mb-3 group-hover:text-[var(--color-accent1)] transition-colors">
+                            从零到一：构建与部署多模态 AI 助手
+                        </h3>
+                        <p class="text-gray-400">
+                            本文将带你走过完整的流程，从数据预处理、模型选型 (LLaVA) 到使用 Docker 和 K8s 实现可扩展的云端部署...
+                        </p>
+                    </div>
+                    <div class="mt-6 flex items-center text-sm text-gray-500">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-2"></i> 2025年11月10日
+                        <i data-lucide="clock" class="w-4 h-4 ml-4 mr-2"></i> 12 分钟阅读
+                    </div>
+                </a>
+
+                <a href="#" class="card-glow p-6 group fade-in-section" style="transition-delay: 200ms;">
+                    <span class="text-xs font-semibold px-3 py-1 rounded-full bg-[var(--color-accent2)] text-white mb-4 inline-block">前端</span>
+                    <h3 class="font-heading text-xl text-white mb-2 group-hover:text-[var(--color-accent2)] transition-colors">
+                        React 2025：Signals 和并发的未来
+                    </h3>
+                    <p class="text-gray-400 text-sm line-clamp-3">
+                        React 19 带来了变革，但真正的未来在于 Signals...
+                    </p>
+                </a>
+                
+                <a href="#" class="card-glow p-6 group fade-in-section" style="transition-delay: 300ms;">
+                    <span class="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-400 text-black mb-4 inline-block">DevOps</span>
+                    <h3 class="font-heading text-xl text-white mb-2 group-hover:text-yellow-400 transition-colors">
+                        我的终极 VS Code 工作流配置
+                    </h3>
+                    <p class="text-gray-400 text-sm line-clamp-3">
+                        提升10倍效率的插件、快捷键和设置。
+                    </p>
+                </a>
+
+                <a href="#" class="card-glow md:col-span-3 p-6 flex flex-col md:flex-row justify-between items-start group fade-in-section" style="transition-delay: 400ms;">
+                    <div>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-green-500 text-black mb-4 inline-block">后端</span>
+                        <h3 class="font-heading text-xl md:text-2xl text-white mb-2 group-hover:text-green-400 transition-colors">
+                            Rust vs. Go：在微服务架构中的性能对决
+                        </h3>
+                        <p class="text-gray-400 max-w-2xl">
+                            深入比较两种现代语言在并发处理、内存安全和实际吞吐量上的差异。
+                        </p>
+                    </div>
+                    <div class="mt-4 md:mt-0 md:ml-6 flex-shrink-0 flex items-center text-sm text-gray-500">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-2"></i> 2025年11月5日
+                        <i data-lucide="eye" class="w-4 h-4 ml-4 mr-2"></i> 3,021 次阅读
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- ===== 技术栈滚动 ===== -->
+        <section id="tech-stack" class="mb-24 py-16 overflow-hidden fade-in-section relative">
+            <h2 class="font-heading text-3xl md:text-4xl text-white text-center mb-10">
+                驱动我的技术栈
+            </h2>
+            <div class="marquee relative w-full h-16 flex items-center">
+                <div class="marquee-content flex items-center space-x-12 px-6">
+                    <!-- 组 1 -->
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="atom" class="w-7 h-7 mr-2 text-cyan-400"></i>React</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="leaf" class="w-7 h-7 mr-2 text-green-500"></i>Node.js</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="code-xml" class="w-7 h-7 mr-2 text-blue-500"></i>TypeScript</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="flask-conical" class="w-7 h-7 mr-2 text-yellow-400"></i>Python</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="database" class="w-7 h-7 mr-2 text-indigo-400"></i>PostgreSQL</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="docker" class="w-7 h-7 mr-2 text-blue-600"></i>Docker</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="ship-wheel" class="w-7 h-7 mr-2 text-blue-400"></i>Kubernetes</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="brain-circuit" class="w-7 h-7 mr-2 text-purple-400"></i>PyTorch</span>
+                    <!-- 组 2 重复 -->
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="atom" class="w-7 h-7 mr-2 text-cyan-400"></i>React</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="leaf" class="w-7 h-7 mr-2 text-green-500"></i>Node.js</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="code-xml" class="w-7 h-7 mr-2 text-blue-500"></i>TypeScript</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="flask-conical" class="w-7 h-7 mr-2 text-yellow-400"></i>Python</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="database" class="w-7 h-7 mr-2 text-indigo-400"></i>PostgreSQL</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="docker" class="w-7 h-7 mr-2 text-blue-600"></i>Docker</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="ship-wheel" class="w-7 h-7 mr-2 text-blue-400"></i>Kubernetes</span>
+                    <span class="flex items-center text-2xl text-gray-400 font-semibold"><i data-lucide="brain-circuit" class="w-7 h-7 mr-2 text-purple-400"></i>PyTorch</span>
+                </div>
+            </div>
+            <div class="pointer-events-none absolute top-0 left-0 w-1/4 h-full bg-gradient-to-r from-[var(--color-bg)] to-transparent z-10"></div>
+            <div class="pointer-events-none absolute top-0 right-0 w-1/4 h-full bg-gradient-to-l from-[var(--color-bg)] to-transparent z-10"></div>
+        </section>
+
+        <!-- ===== 个人项目 ===== -->
+        <section id="projects" class="mb-24">
+            <h2 class="font-heading text-3xl md:text-4xl text-white mb-8 fade-in-section">
+                <i data-lucide="lightbulb" class="inline-block w-8 h-8 text-[var(--color-accent2)] -mt-1"></i>
+                个人项目
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card-glow p-6 fade-in-section" style="transition-delay: 100ms;">
+                    <div class="flex justify-between items-start mb-4">
+                        <i data-lucide="rocket" class="w-10 h-10 text-[var(--color-accent1)]"></i>
+                        <div class="flex space-x-3">
+                            <a href="#" class="text-gray-400 hover:text-[var(--color-accent1)]" title="查看源码"><i data-lucide="github"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-[var(--color-accent1)]" title="访问站点"><i data-lucide="external-link"></i></a>
+                        </div>
+                    </div>
+                    <h3 class="font-heading text-2xl text-white mb-2">星际交易模拟器</h3>
+                    <p class="text-gray-400 mb-4">
+                        一个基于 WebGL 和 React 的 3D 太空贸易游戏，使用 WebSocket 实现实时多人互动。
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">React</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">Three.js</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">Node.js</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">WebSocket</span>
+                    </div>
+                </div>
+
+                <div class="card-glow p-6 fade-in-section" style="transition-delay: 200ms;">
+                    <div class="flex justify-between items-start mb-4">
+                        <i data-lucide="pen-tool" class="w-10 h-10 text-[var(--color-accent2)]"></i>
+                        <div class="flex space-x-3">
+                            <a href="#" class="text-gray-400 hover:text-[var(--color-accent2)]" title="查看源码"><i data-lucide="github"></i></a>
+                        </div>
+                    </div>
+                    <h3 class="font-heading text-2xl text-white mb-2">实时协作白板</h3>
+                    <p class="text-gray-400 mb-4">
+                        使用 CRDTs 实现的高性能、低延迟在线协作画板工具。
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">Go</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">CRDTs</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">gRPC</span>
+                        <span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">Canvas API</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== CTA ===== -->
+        <section class="card-glow p-8 md:p-12 text-center fade-in-section">
+            <h2 class="font-heading text-3xl md:text-4xl text-white mb-4">
+                保持连接
+            </h2>
+            <p class="text-lg text-gray-300 max-w-xl mx-auto mb-8">
+                我对新的挑战和合作持开放态度。如果你有一个有趣的想法，或者只是想打个招呼，请随时联系我。
+            </p>
+            <a href="mailto:your-email@example.com" class="btn-glow px-8 py-3 rounded-full inline-flex items-center gap-2 text-lg">
+                <i data-lucide="send" class="w-5 h-5"></i>
+                联系我
+            </a>
+        </section>
+
+    </main>
+
+    <!-- ===== 页脚 ===== -->
+    <footer class="container mx-auto max-w-6xl px-4 py-8 mt-12 border-t border-gray-500/10">
+        <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2025 C-47. 由代码和咖啡驱动。</p>
+            <p class="mt-2 md:mt-0">灵感源自未来</p>
         </div>
-        <div class="remark iUp">
-        </div>
-    </header>
-    <script type="text/javascript" src="https://unpkg.com/dmego-home-page@latest/assets/js/main.js"></script>
-    <script type="text/javascript" src="./assets/json/images.json?cb=getBingImages"></script>
+    </footer>
+
+    <!-- ===== 脚本 ===== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. 启用 Lucide 图标
+            try {
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Lucide icons failed to load.", e);
+            }
+
+            // 2. 滚动淡入
+            const sections = document.querySelectorAll('.fade-in-section');
+            if ("IntersectionObserver" in window) {
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                sections.forEach(section => observer.observe(section));
+            } else {
+                sections.forEach(section => section.classList.add('is-visible'));
+            }
+
+            // 3. 导航滚动背景
+            const nav = document.getElementById('site-nav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 30) {
+                    nav.classList.add('is-scrolled');
+                } else {
+                    nav.classList.remove('is-scrolled');
+                }
+            });
+
+            // 4. 打字机效果
+            const typingEl = document.getElementById("typing-text");
+            if (typingEl) {
+                const typingWords = [
+                    "探索 AI 与全栈开发",
+                    "构建未来的数字界面",
+                    "热衷于性能与动效",
+                    "分享技术与思考"
+                ];
+                let wordIndex = 0;
+                let charIndex = 0;
+                let deleting = false;
+
+                function typeLoop() {
+                    const current = typingWords[wordIndex];
+                    let delay = deleting ? 60 : 100;
+
+                    if (!deleting) {
+                        typingEl.textContent = current.slice(0, charIndex++);
+                        if (charIndex > current.length) {
+                            deleting = true;
+                            delay = 1200;
+                        }
+                    } else {
+                        typingEl.textContent = current.slice(0, charIndex--);
+                        if (charIndex < 0) {
+                            deleting = false;
+                            wordIndex = (wordIndex + 1) % typingWords.length;
+                            charIndex = 0;
+                            delay = 500;
+                        }
+                    }
+                    setTimeout(typeLoop, delay);
+                }
+                typeLoop();
+            }
+        });
+    </script>
 </body>
 </html>
