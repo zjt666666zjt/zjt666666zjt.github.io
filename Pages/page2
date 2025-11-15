@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 1. 更改标题为文章标题 -->
+    <title>React 2025：Signals 和并发的未来 | KingSum</title>
+    
+    <!-- 2. 引入所有与 index.html 相同的资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,700;0,900;1,700&family=Inter:wght@400;500;700&display.swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide/dist/umd/lucide.min.js"></script>
+    
+    <!-- 3. 复制所有自定义样式 (与 post-detail.html 一致) -->
+    <style>
+        :root {
+            --color-accent1: #00f2ff; /* 电子蓝 */
+            --color-accent2: #ff00ff; /* 品红 */
+            --color-bg: #030014;      /* 深空紫黑 */
+            --color-card: #0a0423;    /* 卡片背景 */
+        }
+        body {
+            background-color: var(--color-bg);
+            color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -150px;
+            pointer-events: none;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 10% 10%, var(--color-accent1) 0, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--color-accent2) 0, transparent 40%);
+            opacity: 0.15;
+            filter: blur(100px);
+            transform: translateZ(-1px);
+        }
+        .font-heading {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+        .gradient-text {
+            background-image: linear-gradient(90deg, var(--color-accent1), var(--color-accent2), var(--color-accent1));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-flow 4s linear infinite;
+        }
+        @keyframes text-flow {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
+        }
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+         .btn-outline {
+            border: 1px solid var(--color-accent2);
+            color: var(--color-accent2);
+            transition: all 0.3s ease;
+        }
+        .btn-outline:hover {
+            background-color: var(--color-accent2);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+        nav.is-scrolled {
+            background-color: rgba(3, 0, 20, 0.7);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease-out, border-color 0.3s ease-out;
+        }
+
+        /* 4. 文章内容样式 (与 post-detail.html 一致) */
+        .article-content {
+            line-height: 1.75;
+            font-size: 1.125rem; /* 18px */
+            color: #d1d5db; /* text-gray-300 */
+        }
+        .article-content h2 {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 700;
+            font-size: 2.25rem; /* 36px */
+            color: #fff;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-accent1);
+        }
+        .article-content h3 {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 700;
+            font-size: 1.75rem; /* 28px */
+            color: #e5e7eb; /* text-gray-200 */
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .article-content p {
+            margin-bottom: 1.5rem;
+        }
+        .article-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+         .article-content li {
+            margin-bottom: 0.5rem;
+        }
+        .article-content a {
+            color: var(--color-accent1);
+            text-decoration: underline;
+            transition: color 0.3s;
+        }
+        .article-content a:hover {
+            color: #fff;
+        }
+        .article-content pre {
+            background-color: var(--color-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.75rem; /* 12px */
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        .article-content code {
+            font-size: 0.9em;
+        }
+        .article-content :not(pre) > code {
+            background-color: var(--color-card);
+            color: var(--color-accent2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- ===== 5. 复制主页的导航栏 (HTML + ID) ===== -->
+    <nav id="site-nav" class="sticky top-0 z-50 w-full px-4 py-3 backdrop-blur-lg border-b border-gray-500/10 transition-colors duration-300">
+        <div class="container mx-auto flex justify-between items-center max-w-6xl">
+            <!-- Logo/名称 -->
+            <a href="index.html" class="text-2xl font-heading text-white hover:text-[var(--color-accent1)] transition-colors">
+                KingSum<span class="text-[var(--color-accent2)]">.</span>
+            </a>
+            
+            <!-- 桌面导航链接 (包含社交图标) -->
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="index.html#featured-posts" class="text-gray-300 hover:text-white transition-colors">精选文章</a>
+                <a href="index.html#projects" class="text-gray-300 hover:text-white transition-colors">个人项目</a>
+                <a href="index.html#tech-stack" class="text-gray-300 hover:text-white transition-colors">技术栈</a>
+                <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">关于我</a>
+                
+                <!-- 桌面社交图标 -->
+                <div class="flex space-x-4 pl-4 border-l border-gray-500/30">
+                    <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-[var(--color-accent1)] transition-colors" title="GitHub">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                    </a>
+                    <a href="https://t.me/despairbad" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-cyan-400 transition-colors" title="Telegram">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 移动端汉堡按钮 (z-50) -->
+            <div class="md:hidden relative z-50">
+                <button id="mobile-menu-toggle" class="text-gray-300 hover:text-white p-2 rounded-md">
+                    <i id="icon-menu" data-lucide="menu" class="w-6 h-6"></i>
+                    <i id="icon-x" data-lucide="x" class="w-6 h-6 hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 移动端弹出菜单 (全屏, z-40, 完全不透明) -->
+        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 z-40 w-full h-screen bg-[var(--color-card)] overflow-y-auto">
+            <div class="flex flex-col space-y-4 p-6 pt-24">
+                <a href="index.html#featured-posts" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">精选文章</a>
+                <a href="index.html#projects" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">个人项目</a>
+                <a href="index.html#tech-stack" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">技术栈</a>
+                <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">关于我</a>
+                
+                <!-- 移动端社交图标 -->
+                <div class="border-t border-gray-500/30 pt-6 flex space-x-6">
+                    <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-[var(--color-accent1)] transition-colors" title="GitHub">
+                        <i data-lucide="github" class="w-6 h-6"></i>
+                    </a>
+                    <a href="https://t.me/despairbad" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-cyan-400 transition-colors" title="Telegram">
+                        <i data-lucide="send" class="w-6 h-6"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== 6. 文章主要内容 ===== -->
+    <main class="container mx-auto max-w-6xl px-4 py-16 md:py-24">
+
+        <!-- 文章标题区域 -->
+        <header class="mb-12 md:mb-16 fade-in-section">
+            <div class="max-w-3xl mx-auto text-center">
+                <!-- 标签 (更新) -->
+                <span class="text-xs font-semibold px-3 py-1 rounded-full bg-[var(--color-accent2)] text-white mb-4 inline-block">
+                    前端
+                </span>
+                
+                <!-- 流光渐变标题 (更新) -->
+                <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl gradient-text mb-6">
+                    React 2025：Signals 和并发的未来
+                </h1>
+                
+                <!-- 元数据 (更新) -->
+                <div class="flex justify-center items-center text-sm text-gray-500 space-x-6">
+                    <div class="flex items-center">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-2"></i> 2025年11月08日
+                    </div>
+                    <div class="flex items-center">
+                        <i data-lucide="clock" class="w-4 h-4 mr-2"></i> 9 分钟阅读
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 文章正文 (全新内容) -->
+        <article class="article-content max-w-3xl mx-auto fade-in-section" style="transition-delay: 100ms;">
+
+            <p class="text-xl text-gray-200">
+                React 19 带来了变革，引入了编译器 (React Compiler) 和 <code>use</code> 钩子，极大地优化了“心智负担”。但当我们放眼 2025，一个更根本的范式转变正在发生。真正的未来，在于 <strong>Signals</strong>。
+            </p>
+
+            <h2>React 19 不是终点，而是起点</h2>
+            <p>
+                React 19 的核心是 React Compiler，它自动实现了 `memo` 化，解决了我们手动优化（<code>useMemo</code>, <code>useCallback</code>）的痛点。这使得 React 变得更“智能”。然而，它并没有改变 React 的核心——**虚拟 DOM (VDOM)** 和 **自顶向下** 的渲染机制。
+            </p>
+            <p>
+                每当状态变化时，React 仍然需要计算 VDOM 的 diff，然后才决定更新哪些 DOM。虽然 React Compiler 加速了这个过程，但“计算 diff”这个动作本身，在某些大规模应用中仍然是性能瓶*颈*。
+            </p>
+
+            <h2>Signals：告别 VDOM Diff</h2>
+            <p>
+                Signals 是一种完全不同的状态管理范式，它在 Solid.js、Preact 和 Qwik 等框架中大放异彩。
+            </p>
+            <p>
+                它的核心思想很简单：**不再是状态变化时“通知”组件重新渲染，而是状态变化时“直接”更新订阅了它的 DOM 节点。**
+            </p>
+            <p>
+                想象一下，Signals 是一个“可订阅的值”。当这个值变化时，它会精确地通知所有“订阅者”（可能是一个 DOM 元素，也可能是另一个计算）。
+            </p>
+
+            <h3>传统 React vs. Signals</h3>
+            <p>
+                我们来看一个简单的计数器对比。
+            </p>
+
+            <pre><code class="language-jsx"><span class="text-gray-500">// 传统 React (useState)</span>
+<span class="text-purple-400">function</span> <span class="text-blue-400">Counter</span>() {
+  <span class="text-purple-400">const</span> [count, setCount] = useState(0);
+
+  <span class="text-gray-500">// 整个函数会重新执行 (re-render)</span>
+  console.<span class="text-blue-400">log</span>(<span class="text-green-400">'Component re-rendered'</span>); 
+
+  <span class="text-purple-400">return</span> (
+    <span class="text-gray-500">&lt;div&gt;</span>
+      <span class="text-gray-500">&lt;p&gt;</span>Count: {count}<span class="text-gray-500">&lt;/p&gt;</span>
+      <span class="text-gray-500">&lt;button</span> <span class="text-yellow-400">onClick</span>={() => <span class="text-blue-400">setCount</span>(c => c + 1)}<span class="text-gray-500">&gt;</span>
+        Increment
+      <span class="text-gray-500">&lt;/button&gt;</span>
+    <span class="text-gray-500">&lt;/div&gt;</span>
+  );
+}
+</code></pre>
+
+            <p>
+                在上面的例子中，每次点击按钮，<code>Counter</code> 组件函数都会**重新执行**，React 会生成新的 VDOM，然后进行 diff。
+            </p>
+            <p>
+                现在，看看（ hypothetical，假想的）React Signals 会是什么样子：
+            </p>
+            <pre><code class="language-jsx"><span class="text-gray-500">// 假想的 React Signals API (受 Solid.js 启发)</span>
+<span class="text-purple-400">function</span> <span class="text-blue-400">Counter</span>() {
+  <span class="text-gray-500">// 1. 创建一个 signal，useSignal 返回一个 getter</span>
+  <span class="text-purple-400">const</span> count = useSignal(0); 
+
+  <span class="text-gray-500">// 2. 创建一个“衍生” signal (computed)</span>
+  <span class="text-purple-400">const</span> double = () => count() * 2;
+
+  <span class="text-gray-500">// 这个函数只在
+            // 首次挂载时执行一次！</span>
+  console.<span class="text-blue-400">log</span>(<span class="text-green-400">'Component mounted'</span>); 
+
+  <span class="text-purple-400">return</span> (
+    <span class="text-gray-500">&lt;div&gt;</span>
+      {/* 3. 在 JSX 中读取 signal (自动订阅) */}
+      <span class="text-gray-500">&lt;p&gt;</span>Count: {count()}<span class="text-gray-500">&lt;/p&gt;</span>
+      <span class="text-gray-500">&lt;p&gt;</span>Double: {double()}<span class="text-gray-500">&lt;/p&gt;</span>
+      
+      {/* 4. 更新 signal */}
+      <span class="text-gray-500">&lt;button</span> <span class="text-yellow-400">onClick</span>={() => count.<span class="text-blue-400">set</span>(count() + 1)}<span class="text-gray-500">&gt;</span>
+        Increment
+      <span class="text-gray-500">&lt;/button&gt;</span>
+    <span class="text-gray-500">&lt;/div&gt;</span>
+  );
+}
+</code></pre>
+
+            <p>
+                在这个假想的例子中，点击按钮时：
+            </p>
+            <ul>
+                <li><code>Counter</code> 组件函数**不会**重新执行。</li>
+                <li><code>count</code> signal 的值被更新。</li>
+                <li>它通知了它的两个订阅者：第一个 <code>&lt;p&gt;</code> 标签和 <code>double</code>。</li>
+                <li><code>double</code> 重新计算，并通知它的订阅者：第二个 <code>&lt;p&gt;</code> 标签。</li>
+                <li>最终，只有两个 <code>&lt;p&gt;</code> 标签内的文本节点被**直接更新**。没有 VDOM，没有 diff。</li>
+            </ul>
+
+            <h2>并发 (Concurrency) 与 Signals 的结合</h2>
+            <p>
+                那么，React 团队苦心经营的并发特性（如 <code>useTransition</code>）怎么办？Signals 是同步更新的，这是否会与并发模式冲突？
+            </p>
+            <p>
+                这正是 2025 年 React 需要解决的核心问题：**如何将“精确更新”的 Signals 和“可中断渲染”的并发模式优雅地结合起来？**
+            </p>
+            <p>
+                一种可能的方向是，React 可能会引入“事务性”的 Signal 更新，允许更新在 <code>useTransition</code> 中被“降级”处理，从而在保持 UI 响应性的同时，享受 Signal 带来的精确更新性能。
+            </p>
+
+            <h2>结语</h2>
+            <p>
+                React 19 的编译器为我们抹平了 `memo` 的复杂性，而 Signals 则可能在未来彻底改变 React 的渲染底层。
+            </p>
+            <p>
+                虽然 React 团队尚未官宣将 Signals 作为核心（尽管 Preact 团队已经这样做了），但社区的呼声和 Solid.js 的成功已经证明了这条路的潜力。到了 2025 年，我们很可能会看到一个融合了编译器、并发和 Signals 优点的、性能更极致的 React。
+            </p>
+            
+            <!-- 文章末尾返回按钮 -->
+            <div class="mt-16 pt-8 border-t border-gray-500/20 text-center">
+                <a href="index.html" class="btn-outline px-6 py-3 rounded-full flex items-center gap-2 mx-auto w-fit">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    返回所有文章
+                </a>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- ===== 7. 复制主页的页脚 ===== -->
+    <footer class="container mx-auto max-w-6xl px-4 py-8 mt-12 border-t border-gray-500/10">
+        <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2025 KingSum. 由代码和咖啡驱动。</p>
+            <p class="mt-2 md:mt-0">灵感源自未来</p>
+        </div>
+    </footer>
+
+    <!-- ===== 8. 复制主页的 JavaScript (包含移动菜单逻辑) ===== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            
+            // 1. 激活 Lucide 图标
+            try {
+                lucide.createIcons();
+            } catch (error) {
+                console.error("Lucide icons failed to load.", error);
+            }
+
+            // 2. 滚动淡入动画
+            const sections = document.querySelectorAll('.fade-in-section');
+            
+            if ("IntersectionObserver" in window) {
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, {
+                    root: null, // 相对于视口
+                    threshold: 0.1 // 元素可见 10% 时触发
+                });
+
+                sections.forEach(section => {
+                    observer.observe(section);
+                });
+            } else {
+                sections.forEach(section => {
+                    section.classList.add('is-visible');
+                });
+            }
+
+            // 3. 导航栏滚动效果
+            const nav = document.getElementById('site-nav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 30) {
+                    nav.classList.add('is-scrolled');
+                } else {
+                    nav.classList.remove('is-scrolled');
+                }
+            });
+
+            // 4. (重要) 移动菜单切换逻辑
+            const menuToggle = document.getElementById('mobile-menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconMenu = document.getElementById('icon-menu');
+            const iconX = document.getElementById('icon-x');
+            const mobileLinks = mobileMenu.querySelectorAll('a'); 
+
+            if (menuToggle && mobileMenu && iconMenu && iconX) {
+                const toggleMenu = () => {
+                    mobileMenu.classList.toggle('hidden');
+                    iconMenu.classList.toggle('hidden');
+                    iconX.classList.toggle('hidden');
+                    
+                    if (mobileMenu.classList.contains('hidden')) {
+                        document.body.style.overflow = '';
+                    } else {
+                        document.body.style.overflow = 'hidden';
+                    }
+                };
+                
+                menuToggle.addEventListener('click', toggleMenu);
+
+                mobileLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (!mobileMenu.classList.contains('hidden')) {
+                            toggleMenu();
+                        }
+                    });
+                });
+            }
+
+        });
+    </script>
+</body>
+</html>
