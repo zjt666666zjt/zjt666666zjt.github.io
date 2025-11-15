@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 1. 更改标题为文章标题 -->
+    <title>从零到一：构建与部署多模态 AI 助手 | KingSum</title>
+    
+    <!-- 2. 引入所有与 index.html 相同的资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,700;0,900;1,700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide/dist/umd/lucide.min.js"></script>
+    
+    <!-- 3. 复制 index.html 的所有自定义样式 -->
+    <style>
+        :root {
+            --color-accent1: #00f2ff; /* 电子蓝 */
+            --color-accent2: #ff00ff; /* 品红 */
+            --color-bg: #030014;      /* 深空紫黑 */
+            --color-card: #0a0423;    /* 卡片背景 */
+        }
+
+        /* 基础样式 (与主页一致) */
+        body {
+            background-color: var(--color-bg);
+            color: #d1d5db; /* text-gray-300 */
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 动态环境光背景 (与主页一致) */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -150px;
+            pointer-events: none;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 10% 10%, var(--color-accent1) 0, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--color-accent2) 0, transparent 40%);
+            opacity: 0.15;
+            filter: blur(100px);
+            transform: translateZ(-1px);
+        }
+
+        /* 标题字体 (与主页一致) */
+        .font-heading {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        /* 动画：流光渐变文字 (与主页一致) */
+        .gradient-text {
+            background-image: linear-gradient(90deg, var(--color-accent1), var(--color-accent2), var(--color-accent1));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-flow 4s linear infinite;
+        }
+
+        @keyframes text-flow {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
+        }
+
+        /* 动画：JS 控制的滚动淡入 (与主页一致) */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 按钮样式 (与主页一致) */
+         .btn-outline {
+            border: 1px solid var(--color-accent2);
+            color: var(--color-accent2);
+            transition: all 0.3s ease;
+        }
+        .btn-outline:hover {
+            background-color: var(--color-accent2);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+        
+        /* 导航栏滚动样式 (与主页一致) */
+        nav.is-scrolled {
+            background-color: rgba(3, 0, 20, 0.7);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease-out, border-color 0.3s ease-out;
+        }
+
+        /* 4. (新增) 文章内容样式 */
+        .article-content {
+            line-height: 1.75;
+            font-size: 1.125rem; /* 18px */
+            color: #d1d5db; /* text-gray-300 */
+        }
+        .article-content h2 {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 700;
+            font-size: 2.25rem; /* 36px */
+            color: #fff;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-accent1);
+        }
+        .article-content h3 {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 700;
+            font-size: 1.75rem; /* 28px */
+            color: #e5e7eb; /* text-gray-200 */
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .article-content p {
+            margin-bottom: 1.5rem;
+        }
+        .article-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+         .article-content li {
+            margin-bottom: 0.5rem;
+        }
+        .article-content a {
+            color: var(--color-accent1);
+            text-decoration: underline;
+            transition: color 0.3s;
+        }
+        .article-content a:hover {
+            color: #fff;
+        }
+        .article-content pre {
+            background-color: var(--color-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.75rem; /* 12px */
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        .article-content code {
+            font-size: 0.9em;
+        }
+        /* 行内代码 */
+        .article-content :not(pre) > code {
+            background-color: var(--color-card);
+            color: var(--color-accent2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- ===== 5. 复制主页的导航栏 (HTML + ID) ===== -->
+    <nav id="site-nav" class="sticky top-0 z-50 w-full px-4 py-3 backdrop-blur-lg border-b border-gray-500/10 transition-colors duration-300">
+        <div class="container mx-auto flex justify-between items-center max-w-6xl">
+            <!-- Logo/名称 -->
+            <!-- 优化：Logo 链接回主页 -->
+            <a href="index.html" class="text-2xl font-heading text-white hover:text-[var(--color-accent1)] transition-colors">
+                KingSum<span class="text-[var(--color-accent2)]">.</span>
+            </a>
+            
+            <!-- 桌面导航链接 (包含社交图标) -->
+            <div class="hidden md:flex items-center space-x-6">
+                <!-- 优化：链接回主页的锚点 -->
+                <a href="index.html#featured-posts" class="text-gray-300 hover:text-white transition-colors">精选文章</a>
+                <a href="index.html#projects" class="text-gray-300 hover:text-white transition-colors">个人项目</a>
+                <a href="index.html#tech-stack" class="text-gray-300 hover:text-white transition-colors">技术栈</a>
+                <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">关于我</a>
+                
+                <!-- 桌面社交图标 -->
+                <div class="flex space-x-4 pl-4 border-l border-gray-500/30">
+                    <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-[var(--color-accent1)] transition-colors" title="GitHub">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                    </a>
+                    <a href="https://t.me/despairbad" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-cyan-400 transition-colors" title="Telegram">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 移动端汉堡按钮 (z-50) -->
+            <div class="md:hidden relative z-50">
+                <button id="mobile-menu-toggle" class="text-gray-300 hover:text-white p-2 rounded-md">
+                    <i id="icon-menu" data-lucide="menu" class="w-6 h-6"></i>
+                    <i id="icon-x" data-lucide="x" class="w-6 h-6 hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 移动端弹出菜单 (全屏, z-40, 完全不透明) -->
+        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 z-40 w-full h-screen bg-[var(--color-card)] overflow-y-auto">
+            <div class="flex flex-col space-y-4 p-6 pt-24">
+                <a href="index.html#featured-posts" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">精选文章</a>
+                <a href="index.html#projects" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">个人项目</a>
+                <a href="index.html#tech-stack" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">技术栈</a>
+                <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-lg text-gray-200 hover:text-white p-2 rounded-md transition-colors">关于我</a>
+                
+                <!-- 移动端社交图标 -->
+                <div class="border-t border-gray-500/30 pt-6 flex space-x-6">
+                    <a href="https://github.com/zjt666666zjt" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-[var(--color-accent1)] transition-colors" title="GitHub">
+                        <i data-lucide="github" class="w-6 h-6"></i>
+                    </a>
+                    <a href="https://t.me/despairbad" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-cyan-400 transition-colors" title="Telegram">
+                        <i data-lucide="send" class="w-6 h-6"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== 6. 文章主要内容 ===== -->
+    <main class="container mx-auto max-w-6xl px-4 py-16 md:py-24">
+
+        <!-- 文章标题区域 -->
+        <header class="mb-12 md:mb-16 fade-in-section">
+            <div class="max-w-3xl mx-auto text-center">
+                <!-- 标签 -->
+                <span class="text-xs font-semibold px-3 py-1 rounded-full bg-[var(--color-accent1)] text-black mb-4 inline-block">
+                    深度解析
+                </span>
+                
+                <!-- 流光渐变标题 -->
+                <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl gradient-text mb-6">
+                    从零到一：构建与部署多模态 AI 助手
+                </h1>
+                
+                <!-- 元数据 -->
+                <div class="flex justify-center items-center text-sm text-gray-500 space-x-6">
+                    <div class="flex items-center">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-2"></i> 2025年11月10日
+                    </div>
+                    <div class="flex items-center">
+                        <i data-lucide="clock" class="w-4 h-4 mr-2"></i> 12 分钟阅读
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 文章正文 -->
+        <!-- 优化：使用 max-w-3xl 保证最佳阅读宽度 -->
+        <article class="article-content max-w-3xl mx-auto fade-in-section" style="transition-delay: 100ms;">
+
+            <p class="text-xl text-gray-200">
+                本文将带你走过完整的流程，从数据预处理、模型选型 (LLaVA) 到使用 Docker 和 K8s 实现可扩展的云端部署。构建一个能理解图像和文本的 AI 助手，不再是遥不可及的梦想。
+            </p>
+
+            <h2>什么是多模态 AI？</h2>
+            <p>
+                传统 AI 模型通常“专精一门”—— 要么处理文本（如 GPT-4），要么处理图像（如 Stable Diffusion）。而**多模态 (Multimodal)** AI，顾名思义，是指能够同时理解和处理多种信息类型（如文本、图像、音频）的 AI 模型。
+            </p>
+            <p>
+                我们的目标是构建一个助手，你可以向它展示一张图片，然后用自然语言提问，比如：“这张图里的小狗是什么品种？” 或 “帮我分析这张图表的主要趋势。”
+            </p>
+            <p>
+                在众多模型中，我们选择了 <strong>LLaVA (Large Language and Vision Assistant)</strong>。LLaVA 通过一个巧妙的连接器，将强大的预训练视觉编码器 (如 CLIP) 与先进的大语言模型 (如 Vicuna) 结合在一起，实现了卓越的视觉理解能力。
+            </p>
+
+            <h2>步骤一：环境与数据准备</h2>
+            <p>
+                万丈高楼平地起。首先，你需要一个合适的环境。由于涉及深度学习，一块支持 CUDA 的 NVIDIA GPU 是必不可少的。
+            </p>
+            <p>
+                其次是数据。LLaVA 的魔力源于“视觉指令微调”。你需要准备一个数据集，包含“图像-问题-答案”三元组。幸运的是，社区已经提供了许多开源数据集，我们可以在此基础上进行微调，或者使用它们来测试模型的预训练效果。
+            </p>
+
+            <h2>步骤二：模型微调与服务启动</h2>
+            <p>
+                我们将使用 Python 和 PyTorch 来实现。假设你已经克隆了 LLaVA 的官方仓库并安装了依赖。
+            </p>
+            <p>
+                微调过程超出了本文的篇幅，但我们可以快速构建一个 API 服务器来加载预训练好的 LLaVA 模型。我们将使用 <a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a>，因为它异步、高性能且易于使用。
+            </p>
+
+            <pre><code class="language-python"><span class="text-gray-500"># app.py - 一个简单的 FastAPI 服务</span>
+<span class="text-purple-400">import</span> uvicorn
+<span class="text-purple-400">from</span> fastapi <span class="text-purple-400">import</span> FastAPI, File, UploadFile, Form
+<span class="text-purple-400">from</span> pydantic <span class="text-purple-400">import</span> BaseModel
+<span class="text-purple-400">from</span> PIL <span class="text-purple-400">import</span> Image
+<span class="text-purple-400">import</span> io
+
+<span class="text-gray-500"># (伪代码) 假设我们有一个 LLaVAModel 类负责加载和推理</span>
+<span class="text-purple-400">from</span> llava_model <span class="text-purple-400">import</span> LLaVAModel
+
+app = FastAPI()
+<span class="text-gray-500"># 在启动时加载模型</span>
+model = LLaVAModel(model_path=<span class="text-green-400">'liuhaotian/llava-v1.5-7b'</span>)
+
+<span class="text-blue-400">class</span> <span class="text-yellow-400">QueryResponse</span>(BaseModel):
+    answer: str
+
+<span class="text-yellow-400">@app.post</span>(<span class="text-green-400">"/query"</span>, response_model=QueryResponse)
+<span class="text-purple-400">async def</span> <span class="text-blue-400">process_query</span>(
+    image: UploadFile = File(...),
+    prompt: str = Form(...)
+):
+    <span class="text-gray-500"># 1. 读取图像</span>
+    image_data = <span class="text-purple-400">await</span> image.read()
+    pil_image = Image.open(io.BytesIO(image_data))
+    
+    <span class="text-gray-500"># 2. 调用模型</span>
+    <span class="text-gray-500"># model.generate() 是我们封装的推理函数</span>
+    response_text = model.generate(pil_image, prompt)
+    
+    <span class="text-purple-400">return</span> QueryResponse(answer=response_text)
+
+<span class="text-purple-400">if</span> __name__ == <span class="text-green-400">"__main__"</span>:
+    uvicorn.run(app, host=<span class="text-green-400">"0.0.0.0"</span>, port=8000)
+</code></pre>
+
+            <h2>步骤三：使用 Docker 容器化</h2>
+            <p>
+                为了在任何地方都能一致地运行我们的服务，我们需要将其打包成 Docker 镜像。
+            </p>
+            <p>
+                创建一个 <code>Dockerfile</code>，内容如下：
+            </p>
+            <pre><code class="language-dockerfile"><span class="text-gray-500"># 使用包含 CUDA 11.8 的 PyTorch 基础镜像</span>
+<span class="text-purple-400">FROM</span> pytorch/pytorch:2.0.1-cuda11.8-cudnn8-runtime
+
+<span class="text-gray-500"># 设置工作目录</span>
+<span class="text-purple-400">WORKDIR</span> /app
+
+<span class="text-gray-500"># 复制依赖文件并安装</span>
+<span class="text-purple-400">COPY</span> requirements.txt .
+<span class="text-purple-400">RUN</span> pip install --no-cache-dir -r requirements.txt
+
+<span class="text-gray-500"># 复制所有项目文件 (包括 app.py 和模型代码)</span>
+<span class="text-purple-400">COPY</span> . .
+
+<span class="text-gray-500"># 暴露 FastAPI 运行的 8000 端口</span>
+<span class="text-purple-400">EXPOSE</span> 8000
+
+<span class="text-gray-500"># 启动服务</span>
+<span class="text-purple-400">CMD</span> ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+</code></pre>
+            <p>
+                现在，你可以通过运行 <code>docker build -t llava-service .</code> 来构建镜像，并通过 <code>docker run -p 8000:8000 --gpus all llava-service</code> 来启动服务。
+            </p>
+
+            <h2>步骤四：部署到 Kubernetes (K8s)</h2>
+            <p>
+                当流量增长时，单点服务（和 GPU）将成为瓶颈。Kubernetes (K8s) 允许我们声明式地管理和扩展容器化应用。
+            </p>
+            <p>
+                我们需要两个核心组件：
+            </p>
+            <ul>
+                <li><strong>Deployment (部署):</strong> 告诉 K8s 我们希望运行多少个 AI 助手的“副本”（Pod），并管理它们的生命周期。</li>
+                <li><strong>Service (服务):</strong> 为这些副本提供一个单一、稳定的访问入口（如负载均衡器）。</li>
+            </ul>
+            <p>
+                这是一个简化的 <code>deployment.yaml</code> 示例：
+            </p>
+            <pre><code class="language-yaml"><span class="text-blue-400">apiVersion:</span> apps/v1
+<span class="text-blue-400">kind:</span> Deployment
+<span class="text-blue-400">metadata:</span>
+  <span class="text-blue-400">name:</span> llava-deployment
+<span class="text-blue-400">spec:</span>
+  <span class="text-blue-400">replicas:</span> 3  <span class="text-gray-500"># 声明我们希望运行 3 个副本</span>
+  <span class="text-blue-400">selector:</span>
+    <span class="text-blue-400">matchLabels:</span>
+      <span class="text-blue-400">app:</span> llava-service
+  <span class="text-blue-400">template:</span>
+    <span class="text-blue-400">metadata:</span>
+      <span class="text-blue-400">labels:</span>
+        <span class="text-blue-400">app:</span> llava-service
+    <span class="text-blue-400">spec:</span>
+      <span class="text-blue-400">containers:</span>
+      - <span class="text-blue-400">name:</span> llava-container
+        <span class="text-blue-400">image:</span> your-registry/llava-service:latest <span class="text-gray-500"># 你的镜像</span>
+        <span class="text-blue-400">ports:</span>
+        - <span class="text-blue-400">containerPort:</span> 8000
+        <span class="text-blue-400">resources:</span>
+          <span class="text-blue-400">limits:</span>
+            <span class="text-green-400">nvidia.com/gpu:</span> 1 <span class="text-gray-500"># (关键) 每个 Pod 请求 1 个 GPU</span>
+---
+<span class="text-blue-400">apiVersion:</span> v1
+<span class="text-blue-400">kind:</span> Service
+<span class="text-blue-400">metadata:</span>
+  <span class="text-blue-400">name:</span> llava-svc
+<span class="text-blue-400">spec:</span>
+  <span class="text-blue-400">type:</span> LoadBalancer <span class="text-gray-500"># 自动创建云负载均衡器</span>
+  <span class="text-blue-400">ports:</span>
+  - <span class="text-blue-400">port:</span> 80
+    <span class="text-blue-400">targetPort:</span> 8000
+  <span class="text-blue-400">selector:</span>
+    <span class="text-blue-400">app:</span> llava-service
+</code></pre>
+            <p>
+                将此文件应用到你的 K8s 集群 (<code>kubectl apply -f deployment.yaml</code>)，K8s 将自动拉取镜像、分配 GPU 资源，并在云上（如 GKE, EKS, AKS）为你创建好一个可自动扩展的负载均衡器。
+            </p>
+
+            <h2>结语</h2>
+            <p>
+                我们从一个想法出发，选择 LLaVA 作为多模态大脑，使用 FastAPI 将其封装为服务，通过 Docker 实现了标准化打包，并最终利用 K8s 实现了可扩展的云端部署。
+            </p>
+            <p>
+                从零到一的旅程充满了挑战，但每一步都让我们离那个能看、能听、能说的 AI 未来更近一步。
+            </p>
+            
+            <!-- (新增) 文章末尾返回按钮 -->
+            <div class="mt-16 pt-8 border-t border-gray-500/20 text-center">
+                <a href="index.html" class="btn-outline px-6 py-3 rounded-full flex items-center gap-2 mx-auto w-fit">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    返回所有文章
+                </a>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- ===== 7. 复制主页的页脚 ===== -->
+    <footer class="container mx-auto max-w-6xl px-4 py-8 mt-12 border-t border-gray-500/10">
+        <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2025 KingSum. 由代码和咖啡驱动。</p>
+            <p class="mt-2 md:mt-0">灵感源自未来</p>
+        </div>
+    </footer>
+
+    <!-- ===== 8. 复制主页的 JavaScript (包含移动菜单逻辑) ===== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            
+            // 1. 激活 Lucide 图标
+            try {
+                lucide.createIcons();
+            } catch (error) {
+                console.error("Lucide icons failed to load.", error);
+            }
+
+            // 2. 滚动淡入动画
+            const sections = document.querySelectorAll('.fade-in-section');
+            
+            if ("IntersectionObserver" in window) {
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, {
+                    root: null, // 相对于视口
+                    threshold: 0.1 // 元素可见 10% 时触发
+                });
+
+                sections.forEach(section => {
+                    observer.observe(section);
+                });
+            } else {
+                sections.forEach(section => {
+                    section.classList.add('is-visible');
+                });
+            }
+
+            // 3. 导航栏滚动效果
+            const nav = document.getElementById('site-nav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 30) {
+                    nav.classList.add('is-scrolled');
+                } else {
+                    nav.classList.remove('is-scrolled');
+                }
+            });
+
+            // 4. (重要) 移动菜单切换逻辑
+            const menuToggle = document.getElementById('mobile-menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconMenu = document.getElementById('icon-menu');
+            const iconX = document.getElementById('icon-x');
+            const mobileLinks = mobileMenu.querySelectorAll('a'); 
+
+            if (menuToggle && mobileMenu && iconMenu && iconX) {
+                const toggleMenu = () => {
+                    mobileMenu.classList.toggle('hidden');
+                    iconMenu.classList.toggle('hidden');
+                    iconX.classList.toggle('hidden');
+                    
+                    if (mobileMenu.classList.contains('hidden')) {
+                        document.body.style.overflow = '';
+                    } else {
+                        document.body.style.overflow = 'hidden';
+                    }
+                };
+                
+                menuToggle.addEventListener('click', toggleMenu);
+
+                mobileLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (!mobileMenu.classList.contains('hidden')) {
+                            toggleMenu();
+                        }
+                    });
+                });
+            }
+
+            // 5. (移除) 打字机效果，因为这个页面不需要
+        });
+    </script>
+</body>
+</html>
