@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI 2026 跨年盛典粒子系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            /* 更深邃的宇宙背景 */
+            background: radial-gradient(circle at center, #110000 0%, #000000 80%);
+            font-family: 'Cinzel', 'Times New Roman', serif; /* 尝试使用更有仪式感的字体 */
+            user-select: none;
+        }
+        canvas { 
+            display: block; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #video-feed {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 160px;
+            height: 120px;
+            border-radius: 8px;
+            transform: scaleX(-1);
+            opacity: 0.2;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            z-index: 10;
+            object-fit: cover;
+            background: #000;
+            transition: opacity 0.5s;
+        }
+        #video-feed:hover { opacity: 0.8; }
+        
+        /* 倒计时数字特效优化 */
+        .countdown-number {
+            font-size: 15rem;
+            font-weight: 400;
+            font-family: 'Times New Roman', serif;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 40px rgba(212, 175, 55, 0.8), 0 0 80px rgba(255, 69, 0, 0.4);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
+        }
+        
+        .countdown-active {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+        }
+
+        .new-year-container {
+            text-align: center;
+            opacity: 0;
+            transition: opacity 2s ease-out;
+            z-index: 20;
+        }
+
+        .new-year-text {
+            font-size: 5rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            background: linear-gradient(135deg, #fff 20%, #ffd700 50%, #b8860b 80%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.5));
+            animation: textShine 3s infinite alternate;
+        }
+
+        @keyframes textShine { from { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.3)); } to { filter: drop-shadow(0 0 50px rgba(255, 215, 0, 0.8)); } }
+
+        .loader {
+            width: 40px; height: 40px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #D4AF37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Loading -->
+    <div id="loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-1000">
+        <div class="loader mb-4"></div>
+        <div class="text-[#D4AF37] text-xs tracking-[0.4em] uppercase">System Initializing</div>
+    </div>
+
+    <!-- UI Layer -->
+    <div class="fixed inset-0 z-20 pointer-events-none flex flex-col items-center justify-center">
+        <!-- 倒计时数字 -->
+        <div id="countdown-display" class="countdown-number"></div>
+        
+        <!-- 新年快乐 -->
+        <div id="new-year-display" class="hidden new-year-container">
+            <h1 class="new-year-text">2026</h1>
+            <p class="text-white/60 text-lg tracking-[0.8em] mt-4 uppercase font-serif">A New Era Begins</p>
+        </div>
+
+        <!-- 顶部信息 -->
+        <div class="absolute top-0 w-full p-8 flex justify-between items-start">
+            <div>
+                <h1 class="text-xl text-white/40 font-serif tracking-[0.2em]">PARTICLE<span class="text-[#D4AF37]">.GALA</span></h1>
+                <p id="gesture-status" class="text-[10px] tracking-widest text-[#D4AF37]/60 mt-2 uppercase">Camera Active</p>
+            </div>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="absolute bottom-10 text-center opacity-40 hover:opacity-100 transition-opacity duration-500">
+            <p class="text-[#D4AF37] text-xs tracking-[0.3em] font-serif uppercase">Show Fingers 5-1 to Morph • Fist ✊ to Expand</p>
+        </div>
+    </div>
+
+    <video id="video-feed" playsinline></video>
+
+    <script>
+        // --- CONFIG ---
+        const CONFIG = {
+            count: 5000,          
+            size: 0.15,           // 粒子更小更精致
+            colorStart: 0xD4AF37, 
+            radius: 10.0          
+        };
+
+        // --- VARS ---
+        let scene, camera, renderer, mesh;
+        let dummy = new THREE.Object3D();
+        let colorHelper = new THREE.Color();
+        
+        let positions = [];
+        let targets = [];
+        let velocities = []; 
+        let phases = []; 
+        
+        let currentGesture = -1; 
+        let isExploded = false;
+        let time = 0;
+        let globalSpeed = 0.2; // 旋转速度
+
+        // --- HAND LOGIC ---
+        function countFingers(landmarks) {
+            let count = 0;
+            const tips = [8, 12, 16, 20]; 
+            const pips = [6, 10, 14, 18]; 
+
+            // 1. 四指判断
+            tips.forEach((tipIdx, i) => {
+                if (landmarks[tipIdx].y < landmarks[pips[i]].y - 0.02) {
+                    count++;
+                }
+            });
+
+            // 2. 大拇指向量判断 (稳定版)
+            const thumbTip = landmarks[4];
+            const thumbMCP = landmarks[2];
+            const pinkyBase = landmarks[17];
+            const distTip = Math.hypot(thumbTip.x - pinkyBase.x, thumbTip.y - pinkyBase.y);
+            const distMCP = Math.hypot(thumbMCP.x - pinkyBase.x, thumbMCP.y - pinkyBase.y);
+
+            if (distTip > distMCP * 1.15) {
+                count++;
+            }
+            return count;
+        }
+
+        // --- THREE.JS SETUP ---
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.02); // 纯黑雾，更深邃
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 18;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0x333333)); 
+            
+            // 主光源 - 金色
+            const mainLight = new THREE.PointLight(0xFFD700, 2, 60); 
+            mainLight.position.set(10, 10, 10);
+            scene.add(mainLight);
+
+            // 轮廓光 - 蓝紫色 (增加一点冷暖对比，显高级)
+            const rimLight = new THREE.PointLight(0x4169E1, 1, 60); 
+            rimLight.position.set(-10, 0, -10);
+            scene.add(rimLight);
+
+            // Mesh
+            const geo = new THREE.IcosahedronGeometry(CONFIG.size, 0);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, 
+                roughness: 0.1,  // 更光滑
+                metalness: 0.9,  // 更金属
+                flatShading: true
+            });
+            
+            mesh = new THREE.InstancedMesh(geo, mat, CONFIG.count);
+            scene.add(mesh);
+
+            // Init Particles (Default Shape: Sphere/Cloud)
+            for(let i=0; i<CONFIG.count; i++) {
+                resetParticle(i, true);
+                phases.push(Math.random() * Math.PI * 2);
+            }
+            mesh.instanceColor.needsUpdate = true;
+
+            window.addEventListener('resize', onResize);
+            
+            // 初始形态：5
+            setShape(5); 
+
+            animate();
+            
+            setTimeout(() => document.getElementById('loading').style.opacity = 0, 800);
+            setTimeout(() => document.getElementById('loading').style.display = 'none', 1800);
+        }
+
+        function resetParticle(i, init = false) {
+            const r = CONFIG.radius + (Math.random() - 0.5) * 5;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+
+            if (init) {
+                positions.push({x,y,z});
+                targets.push({x,y,z});
+                velocities.push({x:0, y:0, z:0});
+            } else {
+                // Not used much now as we morphed shapes
+                positions[i] = {x,y,z};
+            }
+            
+            colorHelper.setHex(CONFIG.colorStart);
+            mesh.setColorAt(i, colorHelper);
+
+            dummy.position.set(x,y,z);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+        }
+
+        // --- GEOMETRY SHAPES ---
+        function setShape(number) {
+            // 5: Saturn Ring (星环)
+            // 4: Octahedron (八面体/晶体)
+            // 3: Atom/Dual Ring (原子/双环)
+            // 2: DNA Helix (双螺旋)
+            // 1: Singularity (奇点/高密球)
+            
+            console.log("Morphing to:", number);
+            const count = CONFIG.count;
+
+            for (let i = 0; i < count; i++) {
+                let x, y, z;
+                
+                if (number === 5) {
+                    // SATURN RING
+                    const angle = Math.random() * Math.PI * 2;
+                    // 70% in ring, 30% in center sphere
+                    if (Math.random() > 0.3) {
+                        const r = 8 + Math.random() * 4;
+                        x = Math.cos(angle) * r;
+                        z = Math.sin(angle) * r;
+                        y = (Math.random() - 0.5) * 1.0;
+                    } else {
+                        const r = Math.random() * 4;
+                        const theta = Math.random() * Math.PI * 2;
+                        const phi = Math.acos(2 * Math.random() - 1);
+                        x = r * Math.sin(phi) * Math.cos(theta);
+                        y = r * Math.sin(phi) * Math.sin(theta);
+                        z = r * Math.cos(phi);
+                    }
+                } 
+                else if (number === 4) {
+                    // DIAMOND / OCTAHEDRON FRAME
+                    // Parametric equation for octahedron surface roughly
+                    // Simple logic: Randomly pick a face and place point
+                    const r = 8;
+                    // Octahedron edges or volume? Let's do volume but geometric
+                    x = (Math.random() - 0.5) * r * 2;
+                    y = (Math.random() - 0.5) * r * 2;
+                    z = (Math.random() - 0.5) * r * 2;
+                    // Cut corners to make octahedron shape roughly: |x|+|y|+|z| <= r
+                    if (Math.abs(x) + Math.abs(y) + Math.abs(z) > r) {
+                        // Project to surface
+                        const scale = r / (Math.abs(x) + Math.abs(y) + Math.abs(z));
+                        x *= scale; y *= scale; z *= scale;
+                    }
+                }
+                else if (number === 3) {
+                    // ATOM / 3 RINGS
+                    const which = i % 3;
+                    const angle = (i / count) * Math.PI * 2 * 10; // many loops
+                    const r = 7;
+                    if (which === 0) {
+                        x = Math.cos(angle) * r; y = Math.sin(angle) * r; z = (Math.random()-0.5);
+                    } else if (which === 1) {
+                        x = Math.cos(angle) * r; z = Math.sin(angle) * r; y = (Math.random()-0.5);
+                    } else {
+                        y = Math.cos(angle) * r; z = Math.sin(angle) * r; x = (Math.random()-0.5);
+                    }
+                }
+                else if (number === 2) {
+                    // DOUBLE HELIX
+                    const t = (i / count) * Math.PI * 8; // 4 turns
+                    const r = 4;
+                    const h = 12;
+                    const side = (i % 2 === 0) ? 1 : -1;
+                    x = Math.cos(t) * r * side;
+                    z = Math.sin(t) * r * side;
+                    y = (i/count - 0.5) * h * 2;
+                }
+                else if (number === 1) {
+                    // SINGULARITY (Core)
+                    // High density sphere
+                    const r = Math.random() * 2.5; // Small radius
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    x = r * Math.sin(phi) * Math.cos(theta);
+                    y = r * Math.sin(phi) * Math.sin(theta);
+                    z = r * Math.cos(phi);
+                }
+                
+                targets[i] = {x, y, z};
+            }
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            if (!mesh) return;
+
+            // Global Rotation: 越接近1转得越快
+            let rotSpeed = 0.002;
+            if (!isExploded && currentGesture > 0) {
+                rotSpeed = 0.002 + (6 - currentGesture) * 0.003;
+            } else if (isExploded) {
+                rotSpeed = 0.0005; // 爆炸后极慢旋转
+            }
+            
+            mesh.rotation.y += rotSpeed;
+            mesh.rotation.z = Math.sin(time * 0.1) * 0.05;
+
+            for (let i = 0; i < CONFIG.count; i++) {
+                
+                if (isExploded) {
+                    // --- BIG BANG EXPANSION (No Gravity) ---
+                    positions[i].x += velocities[i].x;
+                    positions[i].y += velocities[i].y;
+                    positions[i].z += velocities[i].z;
+
+                    // Strong Drag to stop them in space (Creating a Galaxy)
+                    velocities[i].x *= 0.92;
+                    velocities[i].y *= 0.92;
+                    velocities[i].z *= 0.92;
+                    
+                    // No Gravity! Just floating.
+                    
+                    // Add subtle drift wave
+                    positions[i].x += Math.cos(time + i) * 0.01;
+                    positions[i].y += Math.sin(time + i) * 0.01;
+
+                    // Twinkle
+                    const s = Math.max(0, Math.sin(time * 5 + phases[i]));
+                    dummy.scale.set(s, s, s);
+
+                } else {
+                    // --- MORPHING LOGIC ---
+                    let tx = targets[i].x;
+                    let ty = targets[i].y;
+                    let tz = targets[i].z;
+
+                    // Add Noise based on gesture intensity
+                    // 1 is unstable, 5 is calm
+                    let noiseAmp = 0.05;
+                    if (currentGesture === 1) noiseAmp = 0.3; // High vibration at 1
+                    
+                    tx += (Math.random() - 0.5) * noiseAmp;
+                    ty += (Math.random() - 0.5) * noiseAmp;
+                    tz += (Math.random() - 0.5) * noiseAmp;
+
+                    // Lerp to target
+                    const lerpSpeed = 0.08;
+                    positions[i].x += (tx - positions[i].x) * lerpSpeed;
+                    positions[i].y += (ty - positions[i].y) * lerpSpeed;
+                    positions[i].z += (tz - positions[i].z) * lerpSpeed;
+                    
+                    // Breathing scale
+                    const s = 1.0 + Math.sin(time * 3 + phases[i]) * 0.3;
+                    dummy.scale.set(s, s, s);
+                }
+
+                dummy.position.set(positions[i].x, positions[i].y, positions[i].z);
+                dummy.rotation.x += 0.02;
+                dummy.rotation.y += 0.02;
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+            }
+            mesh.instanceMatrix.needsUpdate = true;
+            renderer.render(scene, camera);
+        }
+
+        // --- INTERACTION ---
+        function updateState(fingers) {
+            const uiCount = document.getElementById('countdown-display');
+            const uiNewYear = document.getElementById('new-year-display');
+            const status = document.getElementById('gesture-status');
+
+            if (fingers === 0 && currentGesture !== 0) {
+                // --- TRIGGER BIG BANG ---
+                if (!isExploded) {
+                    triggerBigBang();
+                }
+                currentGesture = 0;
+                
+                uiCount.classList.remove('countdown-active');
+                uiCount.innerText = ""; 
+                uiNewYear.classList.remove('hidden');
+                setTimeout(() => uiNewYear.style.opacity = 1, 100); // Fade in
+                
+                status.innerText = "EXPANSION COMPLETE";
+
+            } else if (fingers >= 1 && fingers <= 5) {
+                // --- COUNTDOWN MORPH ---
+                isExploded = false;
+                uiNewYear.style.opacity = 0;
+                uiNewYear.classList.add('hidden');
+                
+                if (currentGesture !== fingers) {
+                    currentGesture = fingers;
+                    uiCount.innerText = fingers;
+                    
+                    // UI Animation
+                    uiCount.classList.remove('countdown-active');
+                    void uiCount.offsetWidth; 
+                    uiCount.classList.add('countdown-active');
+                    
+                    // Shape Morph
+                    setShape(fingers);
+                    
+                    // Color Logic
+                    updateThemeColor(fingers);
+                    
+                    status.innerText = `MORPH STAGE: ${fingers}`;
+                }
+            }
+        }
+
+        function triggerBigBang() {
+            isExploded = true;
+            console.log("BIG BANG!");
+            
+            for(let i=0; i<CONFIG.count; i++) {
+                const px = positions[i].x;
+                const py = positions[i].y;
+                const pz = positions[i].z;
+                
+                // Normal from center
+                const len = Math.sqrt(px*px + py*py + pz*pz) || 0.01;
+                const nx = px/len;
+                const ny = py/len;
+                const nz = pz/len;
+                
+                // EXPLOSIVE FORCE! 
+                // Much faster initial speed than fireworks
+                const force = 3.0 + Math.random() * 5.0; 
+                
+                velocities[i].x = nx * force;
+                velocities[i].y = ny * force;
+                velocities[i].z = nz * force;
+                
+                // Color: PURE LIGHT (White/Gold/Blue mix)
+                // Looks like a galaxy forming
+                const rand = Math.random();
+                if (rand > 0.8) colorHelper.setHex(0xFFFFFF); // White core
+                else if (rand > 0.5) colorHelper.setHex(0xFFD700); // Gold
+                else colorHelper.setHex(0x87CEEB); // Sky Blue (stars)
+                
+                mesh.setColorAt(i, colorHelper);
+            }
+            mesh.instanceColor.needsUpdate = true;
+        }
+
+        function updateThemeColor(number) {
+            let baseColor = new THREE.Color();
+            
+            // 5: Champagne
+            if (number === 5) baseColor.setHex(0xF0E68C); 
+            // 4: Amber
+            if (number === 4) baseColor.setHex(0xFFBF00);
+            // 3: Orange
+            if (number === 3) baseColor.setHex(0xFF8C00);
+            // 2: Red Orange
+            if (number === 2) baseColor.setHex(0xFF4500);
+            // 1: Crimson (Critical)
+            if (number === 1) baseColor.setHex(0xDC143C);
+
+            for(let i=0; i<CONFIG.count; i++) {
+                colorHelper.copy(baseColor);
+                const hsl = {};
+                colorHelper.getHSL(hsl);
+                // Vary lightness for sparkle
+                colorHelper.setHSL(hsl.h, hsl.s, hsl.l + (Math.random()-0.5)*0.3);
+                mesh.setColorAt(i, colorHelper);
+            }
+            mesh.instanceColor.needsUpdate = true;
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- AI ---
+        async function setupAI() {
+            const video = document.getElementById('video-feed');
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.6,
+                minTrackingConfidence: 0.6
+            });
+
+            hands.onResults((results) => {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const fingers = countFingers(results.multiHandLandmarks[0]);
+                    updateState(fingers);
+                }
+            });
+
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({image: video}); },
+                width: 640, height: 480
+            });
+            await cam.start();
+        }
+
+        window.onload = () => {
+            initThree();
+            setupAI();
+        }
+
+    </script>
+</body>
+</html>
