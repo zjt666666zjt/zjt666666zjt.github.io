@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI 2026 全彩自由流体 (修复版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- 恢复使用通用路径，提高加载成功率 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; user-select: none; }
+        
+        /* 动态背景 */
+        .nebula-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+            background: radial-gradient(circle at center, #050505 0%, #000000 100%);
+        }
+        
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 2; }
+        
+        #video-feed {
+            position: absolute; bottom: 20px; right: 20px; width: 160px; height: 120px;
+            border-radius: 12px; transform: scaleX(-1); opacity: 0.2;
+            border: 1px solid rgba(255, 255, 255, 0.2); z-index: 20;
+            filter: grayscale(100%) contrast(120%);
+        }
+
+        #status-ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; text-align: center; z-index: 10; pointer-events: none;
+        }
+        .main-title {
+            font-size: 80px; font-weight: 900; color: rgba(255,255,255,0.05);
+            text-transform: uppercase; letter-spacing: 20px;
+            mix-blend-mode: overlay;
+        }
+
+        #text-canvas { display: none; }
+        
+        #loading {
+            position: fixed; inset: 0; background: #000; z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #00ffff; font-family: monospace; letter-spacing: 4px;
+            transition: opacity 0.5s;
+        }
+        .loader-bar { width: 200px; height: 2px; background: #111; margin-top: 20px; }
+        .loader-progress { width: 0%; height: 100%; background: #00ffff; transition: width 0.5s; }
+
+        /* 调试/状态信息 */
+        #debug-info {
+            position: absolute; top: 10px; left: 10px; color: #00ff00; font-family: monospace; font-size: 12px; z-index: 100;
+            pointer-events: none; opacity: 0.7;
+        }
+        
+        /* 启动按钮 */
+        #start-btn {
+            margin-top: 20px; padding: 10px 30px; border: 1px solid #00ffff; color: #00ffff; background: transparent;
+            cursor: pointer; font-family: monospace; letter-spacing: 2px;
+            transition: all 0.3s;
+            display: none; /* 默认隐藏，加载完显示 */
+        }
+        #start-btn:hover { background: rgba(0, 255, 255, 0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="nebula-bg"></div>
+    <div id="loading">
+        <div id="loading-text">INITIALIZING AI CORE...</div>
+        <div class="loader-bar"><div class="loader-progress" id="progress"></div></div>
+        <button id="start-btn">START CAMERA</button>
+    </div>
+
+    <div id="debug-info">Status: Initializing...</div>
+
+    <div id="status-ui"><div class="main-title" id="bg-text">READY</div></div>
+
+    <canvas id="text-canvas"></canvas>
+    <video id="video-feed" playsinline></video>
+
+    <script>
+        // --- CONFIG ---
+        const CONFIG = {
+            count: 24000,          
+            size: 0.25,      
+        };
+
+        // --- VARS ---
+        let scene, camera, renderer, mesh;
+        let dummy = new THREE.Object3D();
+        let colorHelper = new THREE.Color();
+        
+        let positions = [];
+        let velocities = []; 
+        let targets = [];    
+        let types = [];      // 0:背景, 1:文字
+        let noiseOffsets = []; 
+        let colors = [];     
+        
+        let textPointsCache = {}; 
+        let currentGesture = -1; 
+        let time = 0;
+        
+        // 0: 自由流体, 1: 爆炸
+        let appState = 0; 
+        let explosionTimer = 0;
+
+        // Debug Log
+        function log(msg) {
+            console.log(msg);
+            document.getElementById('debug-info').innerText = "Status: " + msg;
+        }
+
+        // --- HAND LOGIC ---
+        function countFingers(landmarks) {
+            let count = 0;
+            const tips = [8, 12, 16, 20]; 
+            const pips = [6, 10, 14, 18]; 
+            tips.forEach((tipIdx, i) => { if (landmarks[tipIdx].y < landmarks[pips[i]].y - 0.02) count++; });
+            const thumbTip = landmarks[4];
+            const pinkyBase = landmarks[17];
+            const thumbMCP = landmarks[2];
+            const distTip = Math.hypot(thumbTip.x - pinkyBase.x, thumbTip.y - pinkyBase.y);
+            const distMCP = Math.hypot(thumbMCP.x - pinkyBase.x, thumbMCP.y - pinkyBase.y);
+            if (distTip > distMCP * 1.15) count++;
+            return count;
+        }
+
+        // --- TEXT SAMPLING ---
+        function generateTextPoints(text, isMultiLine = false) {
+            if (textPointsCache[text]) return textPointsCache[text];
+
+            const canvas = document.getElementById('text-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = 400; 
+            const height = 200;
+            canvas.width = width;
+            canvas.height = height;
+
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (isMultiLine) {
+                ctx.font = '900 60px Arial Black'; 
+                ctx.fillText("HAPPY", width / 2, height / 2 - 35);
+                ctx.fillText("NEW YEAR", width / 2, height / 2 + 35);
+            } else {
+                ctx.font = '900 160px Arial Black';
+                ctx.fillText(text, width / 2, height / 2);
+            }
+
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const points = [];
+
+            const step = 2; 
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    if (data[(y * width + x) * 4] > 100) { 
+                        const px = (x / width - 0.5) * 35; 
+                        const py = -(y / height - 0.5) * 17.5; 
+                        points.push({x: px, y: py});
+                    }
+                }
+            }
+            textPointsCache[text] = points;
+            return points;
+        }
+
+        // --- THREE.JS ---
+        function initThree() {
+            log("Initializing 3D Engine...");
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 24; 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0x222222));
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(0, 0, 20);
+            scene.add(light);
+            
+            const geo = new THREE.BoxGeometry(CONFIG.size, CONFIG.size, CONFIG.size);
+            const mat = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, 
+                transparent: true, 
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false 
+            });
+            mesh = new THREE.InstancedMesh(geo, mat, CONFIG.count);
+            scene.add(mesh);
+
+            for(let i=0; i<CONFIG.count; i++) {
+                const x = (Math.random()-0.5)*80;
+                const y = (Math.random()-0.5)*50;
+                const z = (Math.random()-0.5)*40;
+                
+                positions.push({x,y,z});
+                velocities.push({x:0, y:0, z:0}); 
+                targets.push({x,y,z});            
+                types.push(0);                    
+                noiseOffsets.push(Math.random() * 1000); 
+                colors.push({ h: Math.random(), s: 0.8, l: 0.5 }); 
+                
+                dummy.position.set(x,y,z);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+            }
+            
+            document.getElementById('progress').style.width = "50%";
+            log("Generating Assets...");
+            for(let i=1; i<=5; i++) generateTextPoints(i.toString());
+            generateTextPoints("FINALE", true);
+            document.getElementById('progress').style.width = "80%";
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+            updateTarget("WAIT"); 
+        }
+
+        function updateTarget(text, isFinaleText = false) {
+            let points = [];
+            if (text === "WAIT") {
+            } else if (isFinaleText) {
+                points = generateTextPoints("FINALE", true);
+            } else {
+                points = generateTextPoints(text);
+            }
+
+            for (let i = 0; i < CONFIG.count; i++) {
+                if (i < points.length) {
+                    const p = points[i];
+                    targets[i] = { x: p.x, y: p.y, z: 0 }; 
+                    types[i] = 1; 
+                } else {
+                    targets[i] = {
+                        x: (Math.random() - 0.5) * 100, 
+                        y: (Math.random() - 0.5) * 60, 
+                        z: (Math.random() - 0.5) * 30  
+                    };
+                    types[i] = 0; 
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.015;
+            if (!mesh) return;
+
+            let shake = 0;
+            if (appState === 1 && explosionTimer < 10) shake = 0.5; 
+            camera.position.x = (Math.random() - 0.5) * shake;
+            camera.position.y = (Math.random() - 0.5) * shake;
+
+            for (let i = 0; i < CONFIG.count; i++) {
+                let p = positions[i];
+                let v = velocities[i];
+                let t = targets[i];
+                let type = types[i];
+                let baseCol = colors[i];
+
+                if (appState === 1) { 
+                    // 爆炸
+                    p.x += v.x; p.y += v.y; p.z += v.z;
+                    v.y -= 0.003; 
+                    v.x *= 0.98; v.y *= 0.98; v.z *= 0.98;
+                    
+                    const speed = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+                    dummy.scale.set(0.6, 0.6, 1 + speed * 3);
+                    
+                    colorHelper.setHSL((baseCol.h + time * 0.5) % 1, 1.0, 0.6); 
+                    mesh.setColorAt(i, colorHelper);
+
+                } else {
+                    // 流体
+                    const ns = 0.05;
+                    const angle = (Math.cos(p.x * ns + time) + Math.sin(p.y * ns + time)) * Math.PI;
+                    const flowForce = 0.02;
+                    v.x += Math.cos(angle) * flowForce;
+                    v.y += Math.sin(angle) * flowForce;
+                    v.z += Math.sin(time + noiseOffsets[i] * 0.01) * flowForce;
+
+                    if (type === 1) {
+                        const jitter = 0.2; 
+                        const tx = t.x + (Math.random()-0.5) * jitter;
+                        const ty = t.y + (Math.random()-0.5) * jitter;
+                        const ax = (tx - p.x) * 0.12; 
+                        const ay = (ty - p.y) * 0.12;
+                        const az = (t.z - p.z) * 0.12;
+                        v.x += ax; v.y += ay; v.z += az;
+                        dummy.scale.set(1.0, 1.0, 1.0);
+                        
+                        const hue = (p.x * 0.02 + time * 0.2) % 1;
+                        colorHelper.setHSL(hue, 1.0, 0.6);
+                        mesh.setColorAt(i, colorHelper);
+                    } else {
+                        const ax = (t.x - p.x) * 0.005; 
+                        const ay = (t.y - p.y) * 0.005;
+                        v.x += ax; v.y += ay;
+                        dummy.scale.set(0.5, 0.5, 0.5);
+                        colorHelper.setHSL((baseCol.h + time * 0.1) % 1, 0.6, 0.2); 
+                        mesh.setColorAt(i, colorHelper);
+                    }
+                    v.x *= 0.9; v.y *= 0.9; v.z *= 0.9;
+                    p.x += v.x; p.y += v.y; p.z += v.z;
+                }
+                dummy.lookAt(camera.position); 
+                dummy.position.set(p.x, p.y, p.z);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+            }
+            
+            if (appState === 1) {
+                explosionTimer++;
+                // 100帧(约1.6秒)后自动汇聚
+                if (explosionTimer > 100) {
+                    appState = 0;
+                }
+            }
+            
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.instanceColor.needsUpdate = true; 
+            renderer.render(scene, camera);
+        }
+
+        function updateState(fingers) {
+            const bgText = document.getElementById('bg-text');
+
+            if (fingers === 0 && currentGesture !== 0) {
+                currentGesture = 0;
+                appState = 1; 
+                explosionTimer = 0;
+                bgText.innerText = "";
+                
+                // 关键逻辑修复：
+                // 爆炸后，自动设置目标为 HAPPY NEW YEAR
+                updateTarget("FINALE", true);
+                log("Gesture: FIST (Explosion -> Happy New Year)");
+                
+                for(let i=0; i<CONFIG.count; i++) {
+                    const force = 1.0 + Math.random() * 3.0;
+                    const angle = Math.random() * Math.PI * 2;
+                    const zAngle = (Math.random()-0.5) * 2;
+                    velocities[i].x += Math.cos(angle) * force; 
+                    velocities[i].y += Math.sin(angle) * force + 1.0; 
+                    velocities[i].z += zAngle * force;
+                    
+                    const r = Math.random();
+                    if (r > 0.6) colors[i] = {h: 0.1, s: 1.0, l: 0.6}; 
+                    else if (r > 0.3) colors[i] = {h: 0.02, s: 1.0, l: 0.6}; 
+                    else colors[i] = {h: 0.6, s: 1.0, l: 0.9}; 
+                }
+
+            } else if (fingers >= 1 && fingers <= 5) {
+                if (currentGesture !== fingers) {
+                    currentGesture = fingers;
+                    appState = 0; 
+                    bgText.innerText = ""; 
+                    updateTarget(fingers.toString());
+                    log(`Gesture: ${fingers}`);
+                    for(let i=0; i<CONFIG.count; i++) colors[i] = { h: Math.random(), s: 0.8, l: 0.5 };
+                }
+            }
+        }
+
+        async function setupAI() {
+            log("Loading MediaPipe Hands...");
+            try {
+                const video = document.getElementById('video-feed');
+                
+                // 使用最通用的 CDN 路径
+                const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+                
+                hands.setOptions({ 
+                    maxNumHands: 1, 
+                    modelComplexity: 1, 
+                    minDetectionConfidence: 0.6, 
+                    minTrackingConfidence: 0.6 
+                });
+                
+                hands.onResults(results => {
+                    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                        updateState(countFingers(results.multiHandLandmarks[0]));
+                    }
+                });
+
+                const startBtn = document.getElementById('start-btn');
+                const loadingText = document.getElementById('loading-text');
+                const progress = document.getElementById('progress');
+                
+                progress.style.width = "100%";
+                loadingText.innerText = "READY";
+                startBtn.style.display = "block";
+
+                // 手动启动，解决浏览器自动播放限制
+                startBtn.onclick = async () => {
+                    log("Starting Camera...");
+                    try {
+                        const cam = new Camera(video, { 
+                            onFrame: async () => { await hands.send({image: video}); }, 
+                            width: 640, height: 480 
+                        });
+                        await cam.start();
+                        
+                        log("Camera Active. System Running.");
+                        document.getElementById('loading').style.display = "none";
+                    } catch (e) {
+                        log("Camera Failed: " + e.message);
+                        alert("Please allow camera access.");
+                    }
+                };
+            } catch (e) {
+                log("AI Init Failed: " + e);
+            }
+        }
+
+        window.onload = () => { initThree(); setupAI(); };
+    </script>
+</body>
+</html>
