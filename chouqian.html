@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>幸运抽签站 | Lucky Draw</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* 自定义动画 */
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* 移动端优化 */
+        body { -webkit-tap-highlight-color: transparent; }
+        .mobile-shadow { box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+<div id="app" class="flex flex-col h-full max-w-md mx-auto bg-white shadow-2xl w-full relative">
+
+    <header class="bg-indigo-600 text-white p-4 text-center shadow-md z-10 flex-none">
+        <h1 class="text-lg font-bold tracking-wider"><i class="fa-solid fa-clover mr-2"></i>幸运抽签站</h1>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 scroll-smooth">
+        
+        <div v-if="currentTab === 'list'" class="space-y-4">
+            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                <label class="block text-sm font-medium text-indigo-900 mb-2">输入选项 (每行一个)</label>
+                <textarea v-model="listInput" rows="6" 
+                    class="w-full p-3 rounded-lg border-gray-200 border focus:ring-2 focus:ring-indigo-500 focus:outline-none transition text-base"
+                    placeholder="例如：&#10;吃火锅&#10;吃烧烤&#10;回家睡觉"></textarea>
+            </div>
+            
+            <div v-if="result" class="text-center py-8 animate-bounce-in">
+                <p class="text-gray-500 text-sm mb-1">结果是</p>
+                <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 break-words">
+                    {{ result }}
+                </h2>
+            </div>
+        </div>
+
+        <div v-if="currentTab === 'number'" class="space-y-6 pt-4">
+            <div class="flex gap-4 items-center justify-center">
+                <input type="number" v-model="minNum" class="w-20 p-2 text-center border rounded-lg bg-gray-50" placeholder="Min">
+                <span class="text-gray-400 font-bold">至</span>
+                <input type="number" v-model="maxNum" class="w-20 p-2 text-center border rounded-lg bg-gray-50" placeholder="Max">
+            </div>
+
+            <div class="h-40 flex items-center justify-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 relative overflow-hidden">
+                <div v-if="isRolling" class="text-5xl font-mono text-gray-300 blur-sm">{{ tempNum }}</div>
+                <div v-else-if="result" class="text-6xl font-bold text-indigo-600">{{ result }}</div>
+                <div v-else class="text-gray-400 text-sm">点击开始生成</div>
+            </div>
+            
+            <div class="flex justify-center gap-2">
+                 <label class="flex items-center gap-2 text-sm text-gray-600">
+                    <input type="checkbox" v-model="allowRepeat" class="rounded text-indigo-600"> 允许重复
+                 </label>
+            </div>
+        </div>
+
+        <div v-if="currentTab === 'fortune'" class="flex flex-col items-center justify-center h-full pb-10">
+            <div :class="{'shake': isRolling}" class="relative w-40 h-64 bg-gradient-to-b from-red-700 to-red-900 rounded-b-3xl rounded-t-lg shadow-xl flex items-end justify-center mb-8 border-4 border-yellow-500 cursor-pointer" @click="startDraw">
+                <div class="absolute top-10 text-yellow-400 text-4xl border-2 border-yellow-400 rounded-full w-16 h-16 flex items-center justify-center font-serif bg-red-800">签</div>
+                <div class="w-32 h-40 bg-transparent flex justify-center gap-1 overflow-hidden absolute -top-10 opacity-50">
+                    <div class="w-2 h-full bg-yellow-200 rounded-t"></div>
+                    <div class="w-2 h-full bg-yellow-300 rounded-t translate-y-2"></div>
+                    <div class="w-2 h-full bg-yellow-200 rounded-t -translate-y-1"></div>
+                    <div class="w-2 h-full bg-yellow-400 rounded-t translate-y-3"></div>
+                </div>
+            </div>
+            
+            <div v-if="result" class="text-center bg-white p-6 rounded-xl shadow-lg border border-red-100 w-full animate-fade-in">
+                <span class="inline-block px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold mb-2">第 {{ fortuneNumber }} 签</span>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">{{ result.title }}</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">{{ result.desc }}</p>
+            </div>
+            <p v-else class="text-gray-400 text-sm animate-pulse">点击签筒求签</p>
+        </div>
+
+    </main>
+
+    <div class="p-4 bg-white border-t border-gray-100 z-10">
+        <button 
+            @click="startDraw" 
+            :disabled="isRolling"
+            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 text-lg">
+            <i class="fa-solid" :class="isRolling ? 'fa-spinner fa-spin' : 'fa-play'"></i>
+            {{ buttonText }}
+        </button>
+    </div>
+
+    <nav class="bg-white border-t border-gray-200 flex justify-around items-center pb-safe mobile-shadow z-20 text-xs text-gray-500 font-medium">
+        <button @click="switchTab('list')" :class="currentTab === 'list' ? 'text-indigo-600' : ''" class="flex-1 py-3 flex flex-col items-center gap-1 active:bg-gray-50">
+            <i class="fa-solid fa-list-ul text-lg"></i>
+            <span>列表</span>
+        </button>
+        <button @click="switchTab('number')" :class="currentTab === 'number' ? 'text-indigo-600' : ''" class="flex-1 py-3 flex flex-col items-center gap-1 active:bg-gray-50">
+            <i class="fa-solid fa-arrow-down-1-9 text-lg"></i>
+            <span>数字</span>
+        </button>
+        <button @click="switchTab('fortune')" :class="currentTab === 'fortune' ? 'text-red-600' : ''" class="flex-1 py-3 flex flex-col items-center gap-1 active:bg-gray-50">
+            <i class="fa-solid fa-scroll text-lg"></i>
+            <span>灵签</span>
+        </button>
+    </nav>
+
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+        setup() {
+            const currentTab = ref('list');
+            const isRolling = ref(false);
+            const result = ref(null);
+            
+            // 列表模式数据
+            const listInput = ref('');
+            
+            // 数字模式数据
+            const minNum = ref(1);
+            const maxNum = ref(100);
+            const tempNum = ref(0);
+            const allowRepeat = ref(true);
+
+            // 灵签数据 (示例)
+            const fortuneNumber = ref(0);
+            const fortunes = [
+                { title: "大吉", desc: "运势如虹，万事顺遂。适合开展新计划。" },
+                { title: "中吉", desc: "平稳向上，贵人相助。保持谦逊，必有所获。" },
+                { title: "小吉", desc: "虽然有些许波折，但结果是好的。耐心等待。" },
+                { title: "平签", desc: "无风无浪，平平淡淡才是真。适合修身养性。" },
+                { title: "末吉", desc: "黎明前的黑暗。坚持下去，转机就在前方。" }
+            ];
+
+            // 本地存储
+            onMounted(() => {
+                const savedList = localStorage.getItem('drawList');
+                if(savedList) listInput.value = savedList;
+                else listInput.value = "今天吃什么？\n麦当劳\n肯德基\n沙县小吃\n自己做饭";
+            });
+
+            watch(listInput, (newVal) => {
+                localStorage.setItem('drawList', newVal);
+            });
+
+            const buttonText = computed(() => {
+                if (isRolling.value) return '抽取中...';
+                if (currentTab.value === 'fortune') return '摇一摇';
+                return '开始抽签';
+            });
+
+            const switchTab = (tab) => {
+                currentTab.value = tab;
+                result.value = null;
+                isRolling.value = false;
+            };
+
+            const triggerConfetti = () => {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#4f46e5', '#9333ea', '#fbbf24']
+                });
+            };
+
+            const startDraw = () => {
+                if (isRolling.value) return;
+                isRolling.value = true;
+                result.value = null;
+
+                // 简单的动画时长逻辑
+                let duration = 800;
+                if(currentTab.value === 'fortune') duration = 1500;
+
+                // 滚动效果（仅数字模式可视）
+                let interval;
+                if(currentTab.value === 'number') {
+                    interval = setInterval(() => {
+                        tempNum.value = Math.floor(Math.random() * (maxNum.value - minNum.value + 1)) + minNum.value;
+                    }, 50);
+                }
+
+                setTimeout(() => {
+                    clearInterval(interval);
+                    generateResult();
+                    isRolling.value = false;
+                    if(currentTab.value !== 'fortune' || result.value.title.includes('吉')) {
+                        triggerConfetti();
+                    }
+                }, duration);
+            };
+
+            const generateResult = () => {
+                if (currentTab.value === 'list') {
+                    const items = listInput.value.split('\n').filter(item => item.trim() !== '');
+                    if (items.length === 0) {
+                        result.value = "列表为空！";
+                        return;
+                    }
+                    const randomIndex = Math.floor(Math.random() * items.length);
+                    result.value = items[randomIndex];
+                } 
+                else if (currentTab.value === 'number') {
+                    // 简单的随机逻辑
+                    const max = parseInt(maxNum.value);
+                    const min = parseInt(minNum.value);
+                    result.value = Math.floor(Math.random() * (max - min + 1)) + min;
+                }
+                else if (currentTab.value === 'fortune') {
+                    const randomIndex = Math.floor(Math.random() * fortunes.length);
+                    result.value = fortunes[randomIndex];
+                    fortuneNumber.value = Math.floor(Math.random() * 99) + 1;
+                }
+            };
+
+            return {
+                currentTab,
+                listInput,
+                minNum,
+                maxNum,
+                tempNum,
+                result,
+                isRolling,
+                buttonText,
+                switchTab,
+                startDraw,
+                allowRepeat,
+                fortuneNumber
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
