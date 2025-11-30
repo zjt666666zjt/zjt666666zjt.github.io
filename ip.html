@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>NET SIGHT - Ultimate IP Intelligence</title>
 <style>
     :root {
@@ -31,7 +31,7 @@
         color: var(--text-primary);
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         margin: 0;
-        padding: 60px 20px 40px; /* 增加顶部 padding 给固定按钮留空间 */
+        padding: 60px 20px 40px; 
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -131,15 +131,13 @@
 
     /* Hero */
     .hero-section { display: grid; grid-template-columns: 1fr 350px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    @media (max-width: 900px) { .hero-section { grid-template-columns: 1fr; } }
     
     .ip-overview { padding: 40px; display: flex; flex-direction: column; justify-content: center; }
     .flag-large { font-size: 56px; margin-bottom: 10px; display: inline-block; }
-    .ip-display { font-family: 'Monaco', monospace; font-size: 42px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: -1px; }
+    .ip-display { font-family: 'Monaco', monospace; font-size: 42px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: -1px; word-break: break-all; }
     .location-text { font-size: 18px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
     
     .map-box { height: var(--map-height); background: #0f172a; position: relative; overflow: hidden; border-left: 1px solid rgba(255,255,255,0.05); }
-    @media (max-width: 900px) { .map-box { border-left: none; border-top: 1px solid rgba(255,255,255,0.05); height: 250px; } }
     .map-frame { width: 100%; height: 100%; border: none; filter: grayscale(100%) invert(90%) contrast(85%); opacity: 0.8; }
 
     /* Tags */
@@ -179,6 +177,31 @@
 
     .section-divider { color: var(--text-secondary); font-size: 12px; text-align: center; letter-spacing: 2px; opacity: 0.5; font-weight: 700; margin: 10px 0; display: flex; align-items: center; gap: 15px; }
     .section-divider::before, .section-divider::after { content: ''; height: 1px; flex: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); }
+
+    /* --- Mobile Optimization --- */
+    @media (max-width: 900px) {
+        body { padding: 60px 10px 30px; gap: 20px; }
+        .controls { top: 15px; right: 15px; }
+        .lang-btn { padding: 6px 12px; font-size: 12px; }
+        
+        .hero-section { grid-template-columns: 1fr; border-bottom: none; }
+        .ip-overview { padding: 30px 20px; text-align: center; }
+        .location-text { justify-content: center; }
+        .tags-container { justify-content: center; }
+        
+        .flag-large { font-size: 48px; }
+        .ip-display { font-size: 32px; }
+        
+        .map-box { border-left: none; border-top: 1px solid rgba(255,255,255,0.05); height: 200px; }
+        
+        .grid-layout { grid-template-columns: 1fr; padding: 20px; gap: 15px; }
+        
+        .header { padding: 15px 20px; }
+        .brand-text { font-size: 14px; }
+        
+        .terminal-section { margin: 0 20px 30px; }
+        .section-divider { margin: 20px 0; gap: 10px; font-size: 11px; }
+    }
 
 </style>
 </head>
