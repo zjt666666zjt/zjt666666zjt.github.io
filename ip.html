@@ -461,6 +461,7 @@ async function fetchIPData(specificIP) {
 // Multi-source Failover for Domestic IP
 async function getDomesticIP() {
     const services = [
+        { url: 'https://my.ip.cn/?json=true', type: 'custom_ip_cn' },
         { url: 'https://4.ipw.cn', type: 'text' },
         { url: 'https://api.ipify.org?format=json', type: 'json', key: 'ip' },
         { url: 'https://ifconfig.me/ip', type: 'text' }
@@ -472,7 +473,24 @@ async function getDomesticIP() {
             const res = await fetch(svc.url, { signal: controller.signal });
             clearTimeout(id);
             if (!res.ok) continue;
-            let ip = svc.type === 'json' ? (await res.json())[svc.key] : await res.text();
+            
+            let ip = '';
+            if (svc.type === 'json') {
+                ip = (await res.json())[svc.key];
+            } else if (svc.type === 'custom_ip_cn') {
+                const text = await res.text();
+                // 优先尝试 JSON 解析
+                try {
+                    const json = JSON.parse(text);
+                    ip = json.ip;
+                } catch(e) {
+                    // Fallback: 正则提取 IP
+                    const match = text.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
+                    if(match) ip = match[0];
+                }
+            } else {
+                ip = await res.text();
+            }
             if (ip && ip.trim()) return ip.trim();
         } catch (e) { continue; }
     }
