@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employment Verification Letter Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 基础样式 --- */
+        body {
+            background-color: #eef2f5;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- 信件容器样式 (A4 尺寸模拟) --- */
+        .letter-container {
+            width: 8.5in; /* 标准信纸宽度 */
+            min-height: 11in;
+            background-color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+            box-sizing: border-box;
+            /* 打印时避免分页截断 */
+            page-break-after: always;
+        }
+
+        .psu-blue {
+            background-color: #002D62;
+            color: white;
+        }
+
+        /* 顶部 Header */
+        .header {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            padding: 0 50px;
+        }
+
+        .logo-block {
+            display: flex;
+            align-items: center;
+            font-size: 1.4em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-img {
+            width: 45px;
+            height: 45px;
+            margin-right: 15px;
+            object-fit: contain;
+            /* 已移除滤镜，确保显示原图颜色 */
+        }
+
+        /* 正文区域 */
+        .body-content {
+            flex-grow: 1;
+            padding: 50px 70px 80px 70px; /* 增加边距让版面更透气 */
+            position: relative;
+        }
+
+        /* 右上角水印Logo */
+        .right-logo {
+            position: absolute;
+            top: 40px;
+            right: 60px;
+            width: 100px;
+            height: 100px;
+            opacity: 0.9;
+        }
+
+        .right-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .section-margin {
+            margin-bottom: 25px;
+        }
+
+        .re-line {
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 1.05em;
+        }
+
+        /* 动态内容高亮 (仅在编辑时轻微提示，打印时不显示) */
+        .dynamic-text {
+            transition: background-color 0.3s;
+        }
+        
+        /* 签名区域 */
+        .contact-info {
+            margin-top: 30px;
+            margin-bottom: 50px;
+        }
+
+        .signature-area {
+            margin-top: 40px;
+        }
+
+        .signer-name {
+            font-weight: 700;
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+        
+        .signer-title {
+            margin: 0;
+            color: #555;
+        }
+
+        /* 底部 Footer */
+        .footer {
+            padding: 20px 50px;
+            font-size: 9pt;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto; /* 推到底部 */
+        }
+
+        .footer-details {
+            text-align: right;
+            line-height: 1.4;
+        }
+
+        .footer-details span {
+            display: block;
+        }
+
+        /* --- UI控制器样式 (打印时隐藏) --- */
+        .ui-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+        }
+
+        .fab-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #002D62;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 45, 98, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.05);
+            background-color: #004494;
+        }
+
+        .editor-panel {
+            background: white;
+            width: 320px;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+            transform-origin: bottom right;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+            pointer-events: none;
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .editor-panel.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+
+        .editor-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #002D62;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #002D62;
+        }
+
+        .print-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .print-btn:hover {
+            background-color: #218838;
+        }
+
+        /* --- 打印样式 (关键：隐藏UI，重置背景) --- */
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+                margin: 0;
+            }
+            .ui-controls {
+                display: none !important;
+            }
+            .letter-container {
+                box-shadow: none;
+                width: 100%;
+                min-height: auto;
+            }
+            /* 确保背景色打印出来 (Chrome/Edge 设置) */
+            .psu-blue {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 交互 UI (右下角) -->
+    <div class="ui-controls">
+        <!-- 编辑面板 -->
+        <div class="editor-panel" id="editorPanel">
+            <div class="editor-title">信件信息配置</div>
+            
+            <div class="form-group">
+                <label>开具日期 (Date)</label>
+                <input type="text" id="inputDate" value="Dec 6, 2025">
+            </div>
+
+            <div class="form-group">
+                <label>员工姓名 (Employee Name)</label>
+                <input type="text" id="inputName" value="Karen Peetz">
+            </div>
+
+            <div class="form-group">
+                <label>职位 (Job Title)</label>
+                <input type="text" id="inputTitle" value="Executive Director in the Center for Medical Innovation">
+            </div>
+
+            <div class="form-group">
+                <label>入职日期 (Start Date)</label>
+                <input type="text" id="inputStartDate" value="September 1, 2020">
+            </div>
+
+            <div class="form-group">
+                <label>雇佣状态 (Status)</label>
+                <select id="inputStatus">
+                    <option value="Full-time" selected>Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>HR 电话 (Phone)</label>
+                <input type="text" id="inputPhone" value="1-814-865-4700">
+            </div>
+
+            <div class="form-group">
+                <label>签署人姓名 (Signer Name)</label>
+                <input type="text" id="inputSigner" value="Jennifer Walker">
+            </div>
+
+             <div class="form-group">
+                <label>签署人头衔 (Signer Title)</label>
+                <input type="text" id="inputSignerTitle" value="Director of Human Resources">
+            </div>
+
+            <button class="print-btn" onclick="window.print()">🖨️ 打印 / 存为 PDF</button>
+        </div>
+
+        <!-- 开关按钮 -->
+        <button class="fab-btn" onclick="toggleEditor()" title="编辑信件">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+    </div>
+
+    <!-- 信件主体 -->
+    <div class="letter-container">
+
+        <!-- Header -->
+        <div class="header psu-blue">
+            <div class="logo-block">
+                <!-- Header Logo -->
+                <img src="https://raw.githubusercontent.com/zjt666666zjt/zjt666666zjt.github.io/a201a1069e1f42fd50a47b35fc66714b272a3451/e2e5ac9c-52b4-453a-b815-674df6cbc7a5.png"
+                     alt="Logo" class="logo-img">
+                PennState
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="body-content">
+
+            <!-- Large Right Logo -->
+            <div class="right-logo">
+                <img src="https://raw.githubusercontent.com/zjt666666zjt/zjt666666zjt.github.io/a201a1069e1f42fd50a47b35fc66714b272a3451/e2e5ac9c-52b4-453a-b815-674df6cbc7a5.png"
+                     alt="Emblem">
+            </div>
+
+            <!-- Date & Salutation -->
+            <div class="section-margin" style="margin-top:20px;">
+                <p style="font-weight:600;">Date: <span id="displayDate" class="dynamic-text">Dec 6, 2025</span></p>
+            </div>
+
+            <div class="section-margin">
+                <p>To Whom It May Concern,</p>
+                <p class="re-line">Re: Verification of Employment for <strong id="displayName1" class="dynamic-text">Karen Peetz</strong></p>
+            </div>
+
+            <!-- Main Content -->
+            <p>
+                This letter serves to verify that <strong id="displayName2" class="dynamic-text">Karen Peetz</strong> is currently
+                employed as an <strong id="displayTitle" class="dynamic-text">Executive Director in the Center for Medical Innovation</strong> at
+                Penn State University.
+            </p>
+
+            <p>
+                <span id="displayName3" class="dynamic-text">Karen Peetz</span> has been employed with our institution since <strong id="displayStartDate" class="dynamic-text">September 1, 2020</strong>.
+                Her current employment status is <strong id="displayStatus" class="dynamic-text">Full-time</strong>.
+            </p>
+
+            <!-- Contact Information -->
+            <div class="contact-info">
+                <p>
+                    If you require any further information, please do not hesitate to contact the
+                    Human Resources Department at <strong id="displayPhone" class="dynamic-text">1-814-865-4700</strong>.
+                </p>
+            </div>
+
+            <!-- Signature Block -->
+            <div class="signature-area">
+                <p>Sincerely,</p>
+
+                <!-- 签名图片 (如果需要替换可在此处更改src) -->
+                <!-- 这是一个占位符，如果本地有图片请替换，没有则显示文字 -->
+                <div style="height: 50px; display: flex; align-items: flex-end; font-family: 'Brush Script MT', cursive; font-size: 24px; color: #002D62;">
+                    <!-- 如果没有真实签名图片，用手写字体模拟 -->
+                    <span id="displaySignerSignature">Jennifer Walker</span>
+                </div>
+
+                <p class="signer-name" id="displaySigner">Jennifer Walker</p>
+                <p class="signer-title" id="displaySignerTitle">Director of Human Resources</p>
+                <p class="signer-title">The Pennsylvania State University</p>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="footer psu-blue">
+            <div class="logo-block" style="font-size: 1em;">
+                <!-- Footer Logo -->
+                <img src="https://raw.githubusercontent.com/zjt666666zjt/zjt666666zjt.github.io/a201a1069e1f42fd50a47b35fc66714b272a3451/e2e5ac9c-52b4-453a-b815-674df6cbc7a5.png"
+                     alt="Logo" class="logo-img" style="width: 25px; height: 25px;">
+                PennState
+            </div>
+            <div class="footer-details">
+                <span>The Pennsylvania State University</span>
+                <span>201 Old Main, University Park, PA 16802</span>
+                <span style="margin-top:2px;">Phone: <span id="displayFooterPhone">1-814-865-4700</span></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        // 控制面板开关
+        function toggleEditor() {
+            const panel = document.getElementById('editorPanel');
+            panel.classList.toggle('active');
+        }
+
+        // 数据绑定逻辑
+        const bindings = [
+            { input: 'inputDate', targets: ['displayDate'] },
+            { input: 'inputName', targets: ['displayName1', 'displayName2', 'displayName3'] }, // 姓名出现3次
+            { input: 'inputTitle', targets: ['displayTitle'] },
+            { input: 'inputStartDate', targets: ['displayStartDate'] },
+            { input: 'inputStatus', targets: ['displayStatus'] },
+            { input: 'inputPhone', targets: ['displayPhone', 'displayFooterPhone'] },
+            { input: 'inputSigner', targets: ['displaySigner', 'displaySignerSignature'] },
+            { input: 'inputSignerTitle', targets: ['displaySignerTitle'] }
+        ];
+
+        // 初始化监听器
+        bindings.forEach(bind => {
+            const inputEl = document.getElementById(bind.input);
+            
+            if (inputEl) {
+                // 监听输入事件
+                inputEl.addEventListener('input', (e) => {
+                    const newValue = e.target.value;
+                    bind.targets.forEach(targetId => {
+                        const targetEl = document.getElementById(targetId);
+                        if (targetEl) targetEl.textContent = newValue;
+                    });
+                });
+            }
+        });
+
+        // 默认打开编辑面板方便用户看到
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('editorPanel').classList.add('active');
+            }, 500);
+        }
+    </script>
+</body>
+</html>
